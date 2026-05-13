@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tvSettingsTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings"
+        android:textColor="#1A1A2E"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Accent Selection -->
+    <TextView
+        android:id="@+id/tvAccentLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/accent"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/tvSettingsTitle" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupAccent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="true"
+        app:layout_constraintTop_toBottomOf="@id/tvAccentLabel">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipBritish"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/british"
+            android:checked="true"
+            style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipAmerican"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/american"
+            style="@style/Widget.MaterialComponents.Chip.Choice" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- Language Selection -->
+    <TextView
+        android:id="@+id/tvLanguageLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/language"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/chipGroupAccent" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupLanguage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="true"
+        app:layout_constraintTop_toBottomOf="@id/tvLanguageLabel">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipEnglish"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="English"
+            android:checked="true"
+            style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipChinese"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="中文"
+            style="@style/Widget.MaterialComponents.Chip.Choice" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- DUIX Credentials -->
+    <TextView
+        android:id="@+id/tvCredentialsLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/duix_credentials"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/chipGroupLanguage" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilAppId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="App ID"
+        app:layout_constraintTop_toBottomOf="@id/tvCredentialsLabel">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etAppId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilAppKey"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="App Key"
+        app:layout_constraintTop_toBottomOf="@id/tilAppId">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etAppKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilConversationId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Conversation ID"
+        app:layout_constraintTop_toBottomOf="@id/tilAppKey">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etConversationId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/save"
+        android:textAllCaps="false"
+        app:cornerRadius="12dp"
+        app:layout_constraintTop_toBottomOf="@id/tilConversationId" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

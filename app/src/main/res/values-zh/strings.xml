@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">雅思口语陪练</string>
+    <string name="home_subtitle">与AI考官一起练习口语</string>
+
+    <!-- Parts -->
+    <string name="part1_title">Part 1：日常问答</string>
+    <string name="part1_desc">关于个人话题的简短问答（4-5分钟）</string>
+    <string name="part2_title">Part 2：话题独白</string>
+    <string name="part2_desc">根据话题卡进行2分钟独白</string>
+    <string name="part3_title">Part 3：深度讨论</string>
+    <string name="part3_desc">基于Part 2话题的抽象讨论（4-5分钟）</string>
+    <string name="full_mock_title">完整模拟考试</string>
+    <string name="full_mock_desc">Part 1 → 2 → 3 全流程模拟（11-14分钟）</string>
+
+    <!-- Practice -->
+    <string name="listening">正在聆听…</string>
+    <string name="end_session">结束练习</string>
+    <string name="preparing">准备中…</string>
+    <string name="speaking">请开始说…</string>
+
+    <!-- Settings -->
+    <string name="settings">设置</string>
+    <string name="accent">口音</string>
+    <string name="british">英音</string>
+    <string name="american">美音</string>
+    <string name="language">语言</string>
+    <string name="duix_credentials">DUIX 配置</string>
+    <string name="save">保存</string>
+    <string name="saved">已保存</string>
+
+    <!-- History -->
+    <string name="history">练习记录</string>
+
+    <!-- Report -->
+    <string name="report_title">练习报告</string>
+    <string name="overall_band">总分</string>
+    <string name="fluency_coherence">流利度与连贯性</string>
+    <string name="lexical_resource">词汇丰富度</string>
+    <string name="grammatical_range">语法多样性</string>
+    <string name="pronunciation">发音</string>
+    <string name="not_available">暂无</string>
+    <string name="your_transcript">你的回答</string>
+    <string name="word_count">词数</string>
+    <string name="duration">时长</string>
+    <string name="words_per_minute">语速(词/分)</string>
+    <string name="practice_again">再练一次</string>
+    <string name="exit">退出</string>
+    <string name="scoring_in_progress">AI评分中…</string>
+    <string name="strengths">优势</string>
+    <string name="improvements">改进建议</string>
+    <string name="overall_feedback">综合反馈</string>
+    <string name="examiner_transcript">考官</string>
+</resources>

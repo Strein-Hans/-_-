@@ -1,0 +1,206 @@
+[
+  {
+    "id": "topic_001",
+    "category": "People",
+    "topic": "Describe a person who has influenced you the most.",
+    "bulletPoints": [
+      "Who this person is",
+      "How long you have known them",
+      "What qualities they have",
+      "How they have influenced you"
+    ],
+    "followUpQuestions": [
+      "What qualities make a good role model?",
+      "Do you think family influence is stronger than peer influence?",
+      "How has the concept of role models changed in recent years?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_002",
+    "category": "Place",
+    "topic": "Describe a city or town you would like to live in.",
+    "bulletPoints": [
+      "Where it is",
+      "What it is known for",
+      "What you would do there",
+      "Why you would like to live there"
+    ],
+    "followUpQuestions": [
+      "What factors do people consider when choosing where to live?",
+      "How does urbanization affect people's quality of life?",
+      "Do you think cities of the future will be very different from today?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_003",
+    "category": "Object",
+    "topic": "Describe a gift you received that was very special to you.",
+    "bulletPoints": [
+      "What the gift was",
+      "Who gave it to you",
+      "When you received it",
+      "Why it was special"
+    ],
+    "followUpQuestions": [
+      "Do you think the value of a gift depends on its price?",
+      "How have gift-giving customs changed in your culture?",
+      "What is more important: the thought behind a gift or the gift itself?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_004",
+    "category": "Event",
+    "topic": "Describe a festival or celebration that is important in your culture.",
+    "bulletPoints": [
+      "What the festival is",
+      "When it takes place",
+      "How people celebrate it",
+      "Why it is important to you"
+    ],
+    "followUpQuestions": [
+      "How have traditional festivals changed over the years?",
+      "Do you think commercialization has affected traditional celebrations?",
+      "Should schools teach children about cultural festivals?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_005",
+    "category": "Experience",
+    "topic": "Describe a time when you tried something new for the first time.",
+    "bulletPoints": [
+      "What you tried",
+      "When and where it happened",
+      "Who you were with",
+      "How you felt about the experience"
+    ],
+    "followUpQuestions": [
+      "Why is it important to try new things?",
+      "Do you think people become less open to new experiences as they age?",
+      "How can schools encourage students to be more adventurous?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_006",
+    "category": "People",
+    "topic": "Describe a famous person you would like to meet.",
+    "bulletPoints": [
+      "Who this person is",
+      "What they are famous for",
+      "What you would ask them",
+      "Why you want to meet them"
+    ],
+    "followUpQuestions": [
+      "Do celebrities have a responsibility to be good role models?",
+      "Has social media changed the nature of fame?",
+      "Why are people so interested in the lives of famous people?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_007",
+    "category": "Place",
+    "topic": "Describe a quiet place you like to go to relax.",
+    "bulletPoints": [
+      "Where this place is",
+      "How often you go there",
+      "What you do there",
+      "Why it helps you relax"
+    ],
+    "followUpQuestions": [
+      "Why is it difficult to find quiet places in cities?",
+      "Do you think noise pollution is a serious problem?",
+      "How does the environment affect people's mental health?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_008",
+    "category": "Object",
+    "topic": "Describe a book that you found particularly interesting.",
+    "bulletPoints": [
+      "What the book is called",
+      "What it is about",
+      "When you read it",
+      "Why you found it interesting"
+    ],
+    "followUpQuestions": [
+      "Do you think printed books will disappear in the future?",
+      "How has technology changed the way people read?",
+      "Should governments promote reading among young people?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_009",
+    "category": "Experience",
+    "topic": "Describe a journey that you remember well.",
+    "bulletPoints": [
+      "Where you went",
+      "How you traveled",
+      "What you saw and did",
+      "Why you remember it"
+    ],
+    "followUpQuestions": [
+      "What are the advantages and disadvantages of air travel?",
+      "How will travel change in the next 20 years?",
+      "Is it better to travel independently or with a tour group?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_010",
+    "category": "Education",
+    "topic": "Describe a skill you learned that you are proud of.",
+    "bulletPoints": [
+      "What the skill is",
+      "How you learned it",
+      "How long it took to learn",
+      "Why you are proud of it"
+    ],
+    "followUpQuestions": [
+      "What skills do you think will be most important in the future?",
+      "Is it better to learn from a teacher or teach yourself?",
+      "How can technology help people learn new skills?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_011",
+    "category": "Technology",
+    "topic": "Describe a piece of technology you use every day.",
+    "bulletPoints": [
+      "What it is",
+      "How you use it",
+      "How long you have had it",
+      "How it has changed your daily life"
+    ],
+    "followUpQuestions": [
+      "Do you think people rely too much on technology?",
+      "How has technology affected communication between people?",
+      "What technological developments do you expect in the next decade?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_012",
+    "category": "Environment",
+    "topic": "Describe an environmental problem in your country.",
+    "bulletPoints": [
+      "What the problem is",
+      "What causes it",
+      "What effects it has",
+      "What can be done to solve it"
+    ],
+    "followUpQuestions": [
+      "Should individuals or governments be responsible for protecting the environment?",
+      "How can education help solve environmental problems?",
+      "Do you think developing countries should prioritize the economy over the environment?"
+    ],
+    "difficulty": 4
+  }
+]

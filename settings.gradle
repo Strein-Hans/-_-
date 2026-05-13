@@ -1,0 +1,2 @@
+rootProject.name = "duix-cloud-demo"
+include ':app'
