@@ -4,38 +4,21 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.ielts.coach.data.model.*
+import com.ielts.coach.engine.asr.ASRProvider
+import com.ielts.coach.engine.conversation.ConversationProvider
+import com.ielts.coach.engine.dh.DuixMobileManager
 import com.ielts.coach.engine.scoring.ScoringProvider
 import com.ielts.coach.engine.scoring.ScoringRequest
 import com.ielts.coach.engine.scoring.ScoringResult
-import org.json.JSONObject
+import com.ielts.coach.engine.tts.TTSProvider
 
 class IELTSConversationEngine(
-    private val dhManager: DigitalHumanManager,
+    private val asrProvider: ASRProvider,
+    private val ttsProvider: TTSProvider,
+    private val conversationProvider: ConversationProvider,
     private val scoringProvider: ScoringProvider,
-    private val conversationProvider: ConversationProvider = DUIXConversationProvider(dhManager),
+    private val dhManager: DuixMobileManager? = null,
 ) {
-
-    interface ConversationProvider {
-        fun getResponse(
-            userText: String,
-            part: IELTSPart,
-            topic: IELTSTopic?,
-            history: List<String>,
-            callback: (String) -> Unit,
-        )
-    }
-
-    class DUIXConversationProvider(private val dhManager: DigitalHumanManager) : ConversationProvider {
-        override fun getResponse(
-            userText: String,
-            part: IELTSPart,
-            topic: IELTSTopic?,
-            history: List<String>,
-            callback: (String) -> Unit,
-        ) {
-            dhManager.askQuestion(userText)
-        }
-    }
 
     interface ConversationCallback {
         fun onSessionStarted(part: IELTSPart) {}
@@ -55,7 +38,6 @@ class IELTSConversationEngine(
     private var callback: ConversationCallback? = null
     private var currentSession: SpeakingSession? = null
     private var currentPart = IELTSPart.PART_1
-    private var currentConversationId: String = ""
     private var isRunning = false
 
     private val asrBuffer = StringBuilder()
@@ -64,28 +46,35 @@ class IELTSConversationEngine(
     private var prepRunnable: Runnable? = null
     private var monologueRunnable: Runnable? = null
 
+    // Track examiner responses for transcript
+    private val examinerTextBuffer = StringBuilder()
+
     fun setCallback(cb: ConversationCallback) {
         callback = cb
     }
 
     // ── Part 1: Introduction & Interview ──────────────────────────
 
-    fun startPart1(conversationId: String) {
-        startSession(IELTSPart.PART_1, null, conversationId)
+    fun startPart1() {
+        startSession(IELTSPart.PART_1, null)
+        // Kick off with first examiner question
+        conversationProvider.getResponse("", IELTSPart.PART_1, null, emptyList()) { response ->
+            handleExaminerResponse(response)
+        }
     }
 
     // ── Part 2: Long Turn ─────────────────────────────────────────
 
-    fun startPart2(topic: IELTSTopic, conversationId: String) {
-        startSession(IELTSPart.PART_2, topic, conversationId)
+    fun startPart2(topic: IELTSTopic) {
+        startSession(IELTSPart.PART_2, topic)
     }
 
     fun startPreparation(durationSeconds: Int = 60) {
         val session = currentSession ?: return
         session.status = SessionStatus.PREPARING
 
-        val topicText = currentSession?.topic?.formatTopicCard() ?: return
-        dhManager.speakText("Here is your topic card. $topicText You have one minute to prepare.")
+        val topicText = session.topic?.formatTopicCard() ?: return
+        speakExaminer("Here is your topic card. $topicText You have one minute to prepare. You can make notes if you wish.")
 
         var remaining = durationSeconds
         prepRunnable = object : Runnable {
@@ -107,7 +96,8 @@ class IELTSConversationEngine(
         val session = currentSession ?: return
         session.status = SessionStatus.IN_PROGRESS
         callback?.onSessionStarted(IELTSPart.PART_2)
-        dhManager.setMicrophoneMute(false)
+
+        speakExaminer("Now, please start speaking. You have up to two minutes.")
 
         var remaining = durationSeconds
         monologueRunnable = object : Runnable {
@@ -118,12 +108,6 @@ class IELTSConversationEngine(
                     handler.postDelayed(this, 1000)
                 } else {
                     callback?.onMonologueEnd()
-                    conversationProvider.getResponse(
-                        "Thank you. Now, let's move on to discuss this topic further.",
-                        IELTSPart.PART_3,
-                        currentSession?.topic,
-                        emptyList()
-                    ) { _ -> }
                 }
             }
         }
@@ -132,72 +116,98 @@ class IELTSConversationEngine(
 
     // ── Part 3: Discussion ────────────────────────────────────────
 
-    fun startPart3(topic: IELTSTopic, conversationId: String) {
-        startSession(IELTSPart.PART_3, topic, conversationId)
-    }
-
-    // ── Examiner speech capture ───────────────────────────────────
-
-    fun onExaminerSpeaking(text: String) {
-        currentSession?.examinerResponses?.add(text)
-        callback?.onExaminerSpeaking(text)
+    fun startPart3(topic: IELTSTopic) {
+        startSession(IELTSPart.PART_3, topic)
+        conversationProvider.getResponse("", IELTSPart.PART_3, topic, emptyList()) { response ->
+            handleExaminerResponse(response)
+        }
     }
 
     // ── Core: Handle ASR results ──────────────────────────────────
 
-    fun onAsrResult(text: String, sentenceEnd: Boolean) {
-        if (!isRunning) return
+    private val asrCallback = object : ASRProvider.ASRCallback {
+        override fun onPartialResult(text: String) {
+            asrBuffer.append(text).append(" ")
+            callback?.onUserAsrPartial(text)
+        }
 
-        if (sentenceEnd) {
-            val fullText = asrBuffer.toString().trim()
+        override fun onFinalResult(text: String) {
+            val fullText = if (asrBuffer.isNotBlank()) asrBuffer.toString().trim() else text
             asrBuffer.clear()
             if (fullText.isEmpty()) return
 
             Log.d(TAG, "User said: $fullText")
             callback?.onUserAsrFinal(fullText)
-
             currentSession?.userResponses?.add(UserResponse(fullText))
 
+            // Get examiner response
             conversationProvider.getResponse(
-                fullText, currentPart, currentSession?.topic,
-                currentSession?.userResponses?.map { it.text } ?: emptyList()
-            ) { _ -> }
-        } else {
-            asrBuffer.append(text).append(" ")
-            callback?.onUserAsrPartial(text)
+                fullText,
+                currentPart,
+                currentSession?.topic,
+                currentSession?.userResponses?.map { it.text } ?: emptyList(),
+            ) { response ->
+                handleExaminerResponse(response)
+            }
         }
+
+        override fun onError(error: String) {
+            Log.e(TAG, "ASR error: $error")
+            callback?.onError(error)
+        }
+    }
+
+    fun onAsrPartial(text: String) {
+        callback?.onUserAsrPartial(text)
+    }
+
+    fun onAsrFinal(text: String) {
+        if (!isRunning) return
+        val fullText = text.trim()
+        if (fullText.isEmpty()) return
+
+        Log.d(TAG, "User said: $fullText")
+        callback?.onUserAsrFinal(fullText)
+        currentSession?.userResponses?.add(UserResponse(fullText))
+
+        conversationProvider.getResponse(
+            fullText,
+            currentPart,
+            currentSession?.topic,
+            currentSession?.userResponses?.map { it.text } ?: emptyList(),
+        ) { response ->
+            handleExaminerResponse(response)
+        }
+    }
+
+    // ── Examiner speech ───────────────────────────────────────────
+
+    private fun handleExaminerResponse(text: String) {
+        currentSession?.examinerResponses?.add(text)
+        callback?.onExaminerSpeaking(text)
+        speakExaminer(text)
+    }
+
+    private fun speakExaminer(text: String) {
+        dhManager?.startPush()
+        ttsProvider.speak(text)
     }
 
     // ── Session lifecycle ─────────────────────────────────────────
 
-    private fun startSession(part: IELTSPart, topic: IELTSTopic?, conversationId: String) {
+    private fun startSession(part: IELTSPart, topic: IELTSTopic?) {
         stopSession()
 
         currentPart = part
-        currentConversationId = conversationId
         currentSession = SpeakingSession(part = part, topic = topic)
         isRunning = true
         asrBuffer.clear()
 
-        injectIELTSPrompt(part, topic)
+        // Start ASR listening
+        asrProvider.startListening(asrCallback)
 
-        dhManager.connect(conversationId)
         callback?.onSessionStarted(part)
-
         Log.d(TAG, "Session started: $part")
-    }
-
-    private fun injectIELTSPrompt(part: IELTSPart, topic: IELTSTopic?) {
-        val json = JSONObject().apply {
-            put("role", "ielts_examiner")
-            put("part", part.name)
-            topic?.let {
-                put("topic", it.topic)
-                put("category", it.category)
-                put("bullet_points", org.json.JSONArray(it.bulletPoints))
-            }
-        }
-        dhManager.setPromptVariables(json.toString())
     }
 
     fun stopSession() {
@@ -213,6 +223,9 @@ class IELTSConversationEngine(
 
         isRunning = false
         asrBuffer.clear()
+        asrProvider.stopListening()
+        ttsProvider.stop()
+        dhManager?.stopPush()
     }
 
     fun endSessionAndScore(callback: (ScoringReport?) -> Unit) {

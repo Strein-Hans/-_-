@@ -139,3 +139,7 @@ public static final int *;
 -keep class org.eclipse.paho.client.** { *; }
 -keep class org.eclipse.paho.uri.** { *; }
 -keep class io.agora.rtc2.** { *; }
+
+# Duix.Mobile SDK
+-keep class ai.guiji.duix.** { *; }
+-keep class ai.guiji.duix.DuixNcnn { *; }

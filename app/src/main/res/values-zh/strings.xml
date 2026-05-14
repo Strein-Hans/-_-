@@ -25,9 +25,27 @@
     <string name="british">英音</string>
     <string name="american">美音</string>
     <string name="language">语言</string>
-    <string name="duix_credentials">DUIX 配置</string>
     <string name="save">保存</string>
     <string name="saved">已保存</string>
+
+    <!-- Conversation Mode -->
+    <string name="conversation_mode">对话模式</string>
+    <string name="mode_template">模板考官</string>
+    <string name="mode_llm">AI考官（大模型）</string>
+
+    <!-- ASR Config -->
+    <string name="asr_config">语音识别（讯飞）</string>
+
+    <!-- LLM Config -->
+    <string name="llm_config">AI考官设置</string>
+
+    <!-- Model Download -->
+    <string name="model_download_title">下载数字人模型</string>
+    <string name="model_download_preparing">准备下载…</string>
+    <string name="model_download_complete">下载完成！</string>
+    <string name="model_download_failed">下载失败：%s</string>
+    <string name="retry">重试</string>
+    <string name="skip_voice_only">跳过 — 仅语音模式</string>
 
     <!-- History -->
     <string name="history">练习记录</string>

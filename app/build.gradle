@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId "com.ielts.coach"
-        minSdk 24
+        minSdk 29
         targetSdk 34
         versionCode 1
         versionName "1.0.0"
@@ -78,13 +78,10 @@ dependencies {
     // Gson
     implementation 'com.google.code.gson:gson:2.10.1'
 
-    // OkHttp
+    // OkHttp (for iFlytek ASR WebSocket + LLM API)
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.squareup.okhttp3:okhttp-urlconnection:4.12.0'
 
-    // DUIX SDK
-    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
-    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
-    implementation "org.webrtc:google-webrtc:1.0.32006"
-    implementation 'com.auth0:java-jwt:3.18.1'
+    // Duix.Mobile SDK (local module — replace stub with real SDK AAR when available)
+    implementation project(':duix-sdk')
 }

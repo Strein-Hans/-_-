@@ -9,9 +9,11 @@ import com.ielts.coach.data.model.Accent
 import com.ielts.coach.data.model.IELTSPart
 import com.ielts.coach.data.repository.TopicRepository
 import com.ielts.coach.databinding.ActivityHomeBinding
+import com.ielts.coach.engine.dh.DuixMobileManager
 import com.ielts.coach.ui.common.BaseActivity
 import com.ielts.coach.ui.practice.PracticeActivity
 import com.ielts.coach.ui.settings.SettingsActivity
+import com.ielts.coach.ui.setup.ModelDownloadActivity
 
 class HomeActivity : BaseActivity() {
 
@@ -21,6 +23,17 @@ class HomeActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Check if model download is needed (first launch)
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val modelReady = prefs.getBoolean(KEY_MODEL_READY, false)
+        val modelSkipped = prefs.getBoolean(KEY_MODEL_SKIPPED, false)
+
+        if (!modelReady && !modelSkipped) {
+            startActivity(Intent(this, ModelDownloadActivity::class.java))
+            finish()
+            return
+        }
 
         setupClickListeners()
     }
@@ -52,10 +65,7 @@ class HomeActivity : BaseActivity() {
     }
 
     override fun onPermissionsResult(granted: Boolean, code: Int) {
-        if (!granted) {
-            // TODO: show explanation
-            return
-        }
+        if (!granted) return
 
         val intent = Intent(this, PracticeActivity::class.java)
         when (code) {
@@ -85,5 +95,9 @@ class HomeActivity : BaseActivity() {
         private const val RC_PART2 = 102
         private const val RC_PART3 = 103
         private const val RC_FULL_MOCK = 104
+
+        private const val PREFS_NAME = "ielts_coach_prefs"
+        private const val KEY_MODEL_READY = "model_ready"
+        private const val KEY_MODEL_SKIPPED = "model_skipped"
     }
 }

@@ -25,9 +25,27 @@
     <string name="british">British</string>
     <string name="american">American</string>
     <string name="language">Language</string>
-    <string name="duix_credentials">DUIX Credentials</string>
     <string name="save">Save</string>
     <string name="saved">Saved</string>
+
+    <!-- Conversation Mode -->
+    <string name="conversation_mode">Conversation Mode</string>
+    <string name="mode_template">Template Examiner</string>
+    <string name="mode_llm">AI Examiner (LLM)</string>
+
+    <!-- ASR Config -->
+    <string name="asr_config">Speech Recognition (iFlytek)</string>
+
+    <!-- LLM Config -->
+    <string name="llm_config">AI Examiner Settings</string>
+
+    <!-- Model Download -->
+    <string name="model_download_title">Download Digital Human Model</string>
+    <string name="model_download_preparing">Preparing download…</string>
+    <string name="model_download_complete">Download complete!</string>
+    <string name="model_download_failed">Download failed: %s</string>
+    <string name="retry">Retry</string>
+    <string name="skip_voice_only">Skip — Voice Only Mode</string>
 
     <!-- History -->
     <string name="history">History</string>

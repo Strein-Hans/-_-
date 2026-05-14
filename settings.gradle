@@ -1,2 +1,3 @@
 rootProject.name = "duix-cloud-demo"
 include ':app'
+include ':duix-sdk'

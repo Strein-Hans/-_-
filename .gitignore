@@ -1,2 +1,22 @@
-/build
+# Build outputs
+/build/
+*/build/
+**/build/
+
+# IDE
+.idea/
+*.iml
+.gradle/
 local.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keystore
+*.jks
+*.keystore
+
+# Native build cache
+**/.cxx/
+**/cmake/

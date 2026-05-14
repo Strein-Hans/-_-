@@ -13,30 +13,34 @@ import com.ielts.coach.R
 import com.ielts.coach.data.model.*
 import com.ielts.coach.data.repository.TopicRepository
 import com.ielts.coach.databinding.ActivityPracticeBinding
-import com.ielts.coach.engine.DigitalHumanManager
 import com.ielts.coach.engine.IELTSConversationEngine
+import com.ielts.coach.engine.asr.ASRProvider
+import com.ielts.coach.engine.asr.CloudASRProvider
+import com.ielts.coach.engine.conversation.ConversationProvider
+import com.ielts.coach.engine.conversation.LLMConversationProvider
+import com.ielts.coach.engine.conversation.TemplateConversationProvider
+import com.ielts.coach.engine.dh.DuixMobileManager
 import com.ielts.coach.engine.scoring.LocalScoringProvider
 import com.ielts.coach.engine.scoring.ScoringResult
+import com.ielts.coach.engine.tts.AndroidTTSProvider
+import com.ielts.coach.engine.tts.TTSProvider
 import com.ielts.coach.ui.common.BaseActivity
 import com.ielts.coach.ui.report.ReportActivity
-import org.webrtc.EglBase
-import org.webrtc.RendererCommon
-import org.webrtc.VideoTrack
 
 class PracticeActivity : BaseActivity() {
 
     private lateinit var binding: ActivityPracticeBinding
 
-    private val eglBase = EglBase.create()
-    private val eglBaseContext = eglBase.eglBaseContext
-
-    private lateinit var dhManager: DigitalHumanManager
-    private lateinit var conversationEngine: IELTSConversationEngine
+    private var dhManager: DuixMobileManager? = null
+    private var asrProvider: ASRProvider? = null
+    private var ttsProvider: TTSProvider? = null
+    private var conversationEngine: IELTSConversationEngine? = null
 
     private var currentPart = IELTSPart.PART_1
     private var currentTopic: IELTSTopic? = null
     private var isFullMock = false
     private var fullMockPhase = 0
+    private var voiceOnlyMode = false
 
     private val uiHandler = Handler(Looper.getMainLooper())
     private var asrHideRunnable: Runnable? = null
@@ -52,14 +56,12 @@ class PracticeActivity : BaseActivity() {
         setupAudio()
         parseIntent()
         initEngines()
-        setupRenderer()
         setupUI()
         connectAndStart()
     }
 
     private fun setupAudio() {
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         audioManager.isSpeakerphoneOn = true
     }
 
@@ -77,47 +79,84 @@ class PracticeActivity : BaseActivity() {
 
     private fun initEngines() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val appId = prefs.getString(KEY_APP_ID, "") ?: ""
-        val appKey = prefs.getString(KEY_APP_KEY, "") ?: ""
-        val conversationId = prefs.getString(KEY_CONVERSATION_ID, "") ?: ""
+        voiceOnlyMode = !prefs.getBoolean(KEY_MODEL_READY, false)
 
-        if (appId.isBlank() || appKey.isBlank() || conversationId.isBlank()) {
-            showError("Please configure DUIX credentials in Settings first.")
-            return
+        // Digital Human Manager
+        val dh = DuixMobileManager(this)
+        dhManager = dh
+        if (!voiceOnlyMode) {
+            val modelName = prefs.getString(KEY_MODEL_NAME, "") ?: ""
+            if (modelName.isNotBlank()) {
+                dh.setRenderView(binding.renderDigitalHuman)
+                dh.init(modelName, object : DuixMobileManager.DHCallback {
+                    override fun onReady() {
+                        Log.d(TAG, "Digital human ready")
+                        dh.triggerRandomMotion()
+                    }
+
+                    override fun onError(error: String) {
+                        Log.e(TAG, "DH error: $error")
+                        runOnUiThread { showError("Digital human: $error") }
+                    }
+                })
+            } else {
+                voiceOnlyMode = true
+            }
+        }
+
+        // ASR Provider — iFlytek
+        val iflytekAppId = prefs.getString(KEY_IFLYTEK_APP_ID, "") ?: ""
+        val iflytekApiKey = prefs.getString(KEY_IFLYTEK_API_KEY, "") ?: ""
+        val asr = CloudASRProvider(iflytekAppId, iflytekApiKey)
+        asrProvider = asr
+
+        // TTS Provider — Android TTS
+        val tts = AndroidTTSProvider(this)
+        ttsProvider = tts
+        tts.init(object : TTSProvider.TTSCallback {
+            override fun onPCMData(pcmData: ByteArray) {
+                if (!voiceOnlyMode) dh.pushPcm(pcmData)
+            }
+
+            override fun onSpeakStart() {
+                Log.d(TAG, "TTS speaking")
+            }
+
+            override fun onSpeakComplete() {
+                Log.d(TAG, "TTS complete")
+                if (!voiceOnlyMode) {
+                    dh.stopPush()
+                    dh.triggerRandomMotion()
+                }
+            }
+
+            override fun onError(error: String) {
+                Log.e(TAG, "TTS error: $error")
+            }
+        })
+
+        // Conversation Provider — Template or LLM
+        val mode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE) ?: MODE_TEMPLATE
+        val conversationProvider = if (mode == MODE_LLM) {
+            val endpoint = prefs.getString(KEY_LLM_ENDPOINT, "https://api.openai.com/v1/chat/completions") ?: ""
+            val apiKey = prefs.getString(KEY_LLM_API_KEY, "") ?: ""
+            LLMConversationProvider(endpoint, apiKey)
+        } else {
+            TemplateConversationProvider()
         }
 
         val scoringProvider = LocalScoringProvider()
 
-        dhManager = DigitalHumanManager(this, eglBaseContext)
-        dhManager.init(appId, appKey)
-        dhManager.addCallback(object : DigitalHumanManager.DHCallback {
-            override fun onReady() {
-                Log.d(TAG, "Digital human ready")
-            }
+        val engine = IELTSConversationEngine(
+            asrProvider = asr,
+            ttsProvider = tts,
+            conversationProvider = conversationProvider,
+            scoringProvider = scoringProvider,
+            dhManager = if (voiceOnlyMode) null else dh,
+        )
+        conversationEngine = engine
 
-            override fun onVideoTrackReady(track: VideoTrack) {
-                runOnUiThread { track.addSink(binding.renderDigitalHuman) }
-            }
-
-            override fun onAsrResult(text: String, sentenceEnd: Boolean) {
-                conversationEngine.onAsrResult(text, sentenceEnd)
-            }
-
-            override fun onDigitalHumanSpeaking(text: String) {
-                conversationEngine.onExaminerSpeaking(text)
-            }
-
-            override fun onDigitalHumanSpeakStop() {
-                Log.d(TAG, "Examiner stopped speaking")
-            }
-
-            override fun onError(msgType: Int, msgSubType: Int, msg: String?) {
-                runOnUiThread { showError("Error $msgType: $msg") }
-            }
-        })
-
-        conversationEngine = IELTSConversationEngine(dhManager, scoringProvider)
-        conversationEngine.setCallback(object : IELTSConversationEngine.ConversationCallback {
+        engine.setCallback(object : IELTSConversationEngine.ConversationCallback {
             override fun onSessionStarted(part: IELTSPart) {
                 runOnUiThread { updatePartLabel(part) }
             }
@@ -156,14 +195,11 @@ class PracticeActivity : BaseActivity() {
             override fun onScoringComplete(result: ScoringResult) {
                 runOnUiThread { updateScoreBar(result.score) }
             }
-        })
-    }
 
-    private fun setupRenderer() {
-        binding.renderDigitalHuman.init(eglBaseContext, null)
-        binding.renderDigitalHuman.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL)
-        binding.renderDigitalHuman.setMirror(false)
-        binding.renderDigitalHuman.setEnableHardwareScaler(false)
+            override fun onError(msg: String) {
+                runOnUiThread { showError(msg) }
+            }
+        })
     }
 
     private fun setupUI() {
@@ -173,21 +209,18 @@ class PracticeActivity : BaseActivity() {
     }
 
     private fun connectAndStart() {
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val conversationId = prefs.getString(KEY_CONVERSATION_ID, "") ?: ""
-        if (conversationId.isBlank()) return
-
+        val engine = conversationEngine ?: return
         when (currentPart) {
-            IELTSPart.PART_1 -> conversationEngine.startPart1(conversationId)
+            IELTSPart.PART_1 -> engine.startPart1()
             IELTSPart.PART_2 -> {
                 val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
-                conversationEngine.startPart2(topic, conversationId)
+                engine.startPart2(topic)
                 showTopicCard(topic)
-                conversationEngine.startPreparation()
+                engine.startPreparation()
             }
             IELTSPart.PART_3 -> {
                 val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
-                conversationEngine.startPart3(topic, conversationId)
+                engine.startPart3(topic)
             }
         }
     }
@@ -255,10 +288,11 @@ class PracticeActivity : BaseActivity() {
 
     private fun finishSession() {
         if (isFinishing) return
+        val engine = conversationEngine ?: run { finish(); return }
         isFinishing = true
         showScoringLoading()
 
-        conversationEngine.endSessionAndScore { report ->
+        engine.endSessionAndScore { report ->
             runOnUiThread {
                 if (report != null) {
                     val intent = Intent(this, ReportActivity::class.java)
@@ -272,10 +306,10 @@ class PracticeActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        conversationEngine.stopSession()
-        dhManager.release()
-        binding.renderDigitalHuman.release()
-        eglBase.release()
+        conversationEngine?.stopSession()
+        asrProvider?.release()
+        ttsProvider?.release()
+        dhManager?.release()
     }
 
     companion object {
@@ -283,9 +317,17 @@ class PracticeActivity : BaseActivity() {
         const val EXTRA_PART = "extra_part"
         const val EXTRA_TOPIC_ID = "extra_topic_id"
         const val EXTRA_FULL_MOCK = "extra_full_mock"
+
         private const val PREFS_NAME = "ielts_coach_prefs"
-        private const val KEY_APP_ID = "app_id"
-        private const val KEY_APP_KEY = "app_key"
-        private const val KEY_CONVERSATION_ID = "conversation_id"
+        private const val KEY_MODEL_READY = "model_ready"
+        private const val KEY_MODEL_NAME = "model_name"
+        private const val KEY_IFLYTEK_APP_ID = "iflytek_app_id"
+        private const val KEY_IFLYTEK_API_KEY = "iflytek_api_key"
+        private const val KEY_CONVERSATION_MODE = "conversation_mode"
+        private const val KEY_LLM_ENDPOINT = "llm_endpoint"
+        private const val KEY_LLM_API_KEY = "llm_api_key"
+
+        private const val MODE_TEMPLATE = "template"
+        private const val MODE_LLM = "llm"
     }
 }
