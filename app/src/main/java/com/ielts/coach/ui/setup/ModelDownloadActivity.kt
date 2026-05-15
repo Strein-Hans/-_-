@@ -21,12 +21,22 @@ class ModelDownloadActivity : BaseActivity() {
 
         // If base config and model already downloaded, skip to home
         if (VirtualModelUtil.checkBaseConfig(this)) {
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_MODEL_READY, true)
+                .apply()
             goToHome()
             return
         }
 
         binding.btnRetry.setOnClickListener { startDownload() }
-        binding.btnSkip.setOnClickListener { goToHome() }
+        binding.btnSkip.setOnClickListener {
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_MODEL_SKIPPED, true)
+                .apply()
+            goToHome()
+        }
 
         startDownload()
     }
@@ -88,5 +98,6 @@ class ModelDownloadActivity : BaseActivity() {
     companion object {
         private const val PREFS_NAME = "ielts_coach_prefs"
         private const val KEY_MODEL_READY = "model_ready"
+        private const val KEY_MODEL_SKIPPED = "model_skipped"
     }
 }

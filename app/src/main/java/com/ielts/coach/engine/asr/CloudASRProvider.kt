@@ -1,5 +1,6 @@
 package com.ielts.coach.engine.asr
 
+import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -8,19 +9,26 @@ import android.os.Looper
 import android.util.Base64
 import android.util.Log
 import okhttp3.*
-import okhttp3.internal.concurrent.Task
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.net.URL
+import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 class CloudASRProvider(
     private val appId: String,
     private val apiKey: String,
+    private val apiSecret: String,
 ) : ASRProvider {
 
     private var callback: ASRProvider.ASRCallback? = null
@@ -37,6 +45,11 @@ class CloudASRProvider(
     override fun startListening(callback: ASRProvider.ASRCallback) {
         this.callback = callback
         if (isListening) return
+
+        if (!isAvailable()) {
+            uiHandler.post { callback.onError("iFlytek credentials not configured. Please go to Settings.") }
+            return
+        }
 
         connectWebSocket()
     }
@@ -55,7 +68,7 @@ class CloudASRProvider(
         client.dispatcher.executorService.shutdown()
     }
 
-    override fun isAvailable(): Boolean = appId.isNotBlank() && apiKey.isNotBlank()
+    override fun isAvailable(): Boolean = appId.isNotBlank() && apiKey.isNotBlank() && apiSecret.isNotBlank()
 
     private fun connectWebSocket() {
         val url = buildAuthUrl()
@@ -88,11 +101,29 @@ class CloudASRProvider(
     }
 
     private fun buildAuthUrl(): String {
-        val ts = System.currentTimeMillis() / 1000
-        return "wss://iat-api.xfyun.cn/v2/iat" +
-                "?authorization=Bearer ${apiKey}" +
-                "&date=$ts" +
-                "&host=iat-api.xfyun.cn"
+        val host = "iat-api.xfyun.cn"
+        val path = "/v2/iat"
+        val date = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("GMT")
+        }.format(Date())
+
+        val signatureOrigin = "host: $host\ndate: $date\nGET $path HTTP/1.1"
+        val signature = hmacSha256Base64(signatureOrigin, apiSecret)
+
+        val authorizationOrigin = "api_key=\"$apiKey\", algorithm=\"hmac-sha256\", headers=\"host date request-line\", signature=\"$signature\""
+        val authorization = Base64.encodeToString(authorizationOrigin.toByteArray(), Base64.NO_WRAP)
+
+        return "wss://$host$path" +
+                "?authorization=${URLEncoder.encode(authorization, "UTF-8")}" +
+                "&date=${URLEncoder.encode(date, "UTF-8")}" +
+                "&host=$host"
+    }
+
+    private fun hmacSha256Base64(data: String, key: String): String {
+        if (key.isEmpty()) return ""
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(key.toByteArray(), "HmacSHA256"))
+        return Base64.encodeToString(mac.doFinal(data.toByteArray()), Base64.NO_WRAP)
     }
 
     private fun sendStartFrame() {
@@ -142,6 +173,7 @@ class CloudASRProvider(
         webSocket?.send(json.toString())
     }
 
+    @SuppressLint("MissingPermission")
     private fun startAudioCapture() {
         val bufferSize = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,

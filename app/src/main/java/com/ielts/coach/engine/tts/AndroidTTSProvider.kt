@@ -3,17 +3,15 @@ package com.ielts.coach.engine.tts
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.util.Log
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Locale
@@ -38,22 +36,6 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
                 uiHandler.post { callback.onError("TTS init failed") }
             }
         }
-
-        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-                uiHandler.post { callback.onSpeakStart() }
-            }
-
-            override fun onDone(utteranceId: String?) {
-                isSpeaking = false
-                uiHandler.post { callback.onSpeakComplete() }
-            }
-
-            override fun onError(utteranceId: String?) {
-                isSpeaking = false
-                uiHandler.post { callback.onError("TTS utterance error") }
-            }
-        })
     }
 
     override fun speak(text: String) {
@@ -61,7 +43,6 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
         isSpeaking = true
 
         val wavFile = File(context.cacheDir, "tts_output_${System.currentTimeMillis()}.wav")
-
         val utteranceId = "tts_${System.currentTimeMillis()}"
 
         val result = tts?.synthesizeToFile(text, Bundle(), wavFile, utteranceId)
@@ -71,7 +52,6 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
             return
         }
 
-        // Poll for file ready, then process
         Thread {
             var attempts = 0
             while (!wavFile.exists() && attempts < 100) {
@@ -79,21 +59,32 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
                 attempts++
             }
             if (!wavFile.exists()) {
+                isSpeaking = false
                 uiHandler.post { callback?.onError("TTS file not generated") }
                 return@Thread
             }
 
+            Thread.sleep(100)
+
             try {
-                val pcmData = wavToPcm(wavFile)
-                val resampledPcm = resampleTo16k(pcmData, getWavSampleRate(wavFile))
+                val wavData = WavData.parse(wavFile)
+                if (wavData.pcm.isEmpty()) {
+                    isSpeaking = false
+                    uiHandler.post { callback?.onError("TTS produced empty audio") }
+                    return@Thread
+                }
 
-                // Push PCM to callback (for Duix.Mobile lip-sync)
+                val resampledPcm = resampleTo16k(wavData.pcm, wavData.sampleRate)
+
+                uiHandler.post { callback?.onSpeakStart() }
                 callback?.onPCMData(resampledPcm)
-
-                // Play through AudioTrack
                 playPCM(resampledPcm)
+
+                isSpeaking = false
+                uiHandler.post { callback?.onSpeakComplete() }
             } catch (e: Exception) {
                 Log.e(TAG, "Audio processing error", e)
+                isSpeaking = false
                 uiHandler.post { callback?.onError(e.message ?: "Audio error") }
             } finally {
                 wavFile.delete()
@@ -114,27 +105,46 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
         callback = null
     }
 
-    private fun getWavSampleRate(wavFile: File): Int {
-        FileInputStream(wavFile).use { fis ->
-            val header = ByteArray(44)
-            fis.read(header)
-            return ByteBuffer.wrap(header, 24, 4)
-                .order(ByteOrder.LITTLE_ENDIAN).int
+    // Properly parse WAV — finds "data" chunk instead of assuming 44-byte header
+    private data class WavData(val sampleRate: Int, val pcm: ByteArray) {
+        companion object {
+            fun parse(file: File): WavData {
+                val bytes = file.readBytes()
+                val bb = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+
+                // Read sample rate from fmt chunk (offset 24 in standard WAV)
+                val sampleRate = bb.getInt(24)
+
+                // Find "data" chunk — search for the marker instead of assuming offset 36
+                var dataOffset = 12 // skip RIFF header
+                while (dataOffset < bytes.size - 8) {
+                    val chunkId = String(bytes, dataOffset, 4)
+                    val chunkSize = ByteBuffer.wrap(bytes, dataOffset + 4, 4)
+                        .order(ByteOrder.LITTLE_ENDIAN).int
+                    if (chunkId == "data") {
+                        val pcmStart = dataOffset + 8
+                        val pcmEnd = (pcmStart + chunkSize).coerceAtMost(bytes.size)
+                        return WavData(sampleRate, bytes.copyOfRange(pcmStart, pcmEnd))
+                    }
+                    dataOffset += 8 + chunkSize
+                    // Chunks must be word-aligned
+                    if (chunkSize % 2 != 0) dataOffset++
+                }
+
+                // Fallback: assume standard 44-byte header
+                return WavData(sampleRate, if (bytes.size > 44) bytes.copyOfRange(44, bytes.size) else ByteArray(0))
+            }
         }
     }
 
-    private fun wavToPcm(wavFile: File): ByteArray {
-        val bytes = wavFile.readBytes()
-        // Skip 44-byte WAV header
-        return if (bytes.size > 44) bytes.copyOfRange(44, bytes.size) else bytes
-    }
-
     private fun resampleTo16k(pcm: ByteArray, sourceRate: Int): ByteArray {
+        if (sourceRate <= 0 || sourceRate > 96000) return pcm
         if (sourceRate == targetSampleRate) return pcm
 
         val ratio = sourceRate.toDouble() / targetSampleRate
         val sourceSamples = pcm.size / 2
-        val targetSamples = (sourceSamples / ratio).toInt()
+        if (sourceSamples == 0) return pcm
+        val targetSamples = (sourceSamples / ratio).toInt().coerceAtLeast(1)
         val result = ByteArray(targetSamples * 2)
         val bb = ByteBuffer.wrap(result).order(ByteOrder.LITTLE_ENDIAN)
         val srcBB = ByteBuffer.wrap(pcm).order(ByteOrder.LITTLE_ENDIAN)
@@ -181,8 +191,7 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
 
         audioTrack?.play()
 
-        // Push in chunks for smooth playback
-        val chunkSize = 3200 // 100ms of 16kHz 16-bit mono
+        val chunkSize = 3200
         var offset = 0
         while (offset < pcmData.size && isSpeaking) {
             val end = (offset + chunkSize).coerceAtMost(pcmData.size)
@@ -190,7 +199,6 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
             offset = end
         }
 
-        // Wait for playback to finish
         while (audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING && isSpeaking) {
             try {
                 Thread.sleep(50)

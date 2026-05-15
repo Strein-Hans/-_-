@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 class LLMConversationProvider(
     private val endpoint: String,
     private val apiKey: String,
-    private val model: String = "gpt-4o-mini",
+    private val model: String = "deepseek-chat",
 ) : ConversationProvider {
 
     private val client = OkHttpClient.Builder()

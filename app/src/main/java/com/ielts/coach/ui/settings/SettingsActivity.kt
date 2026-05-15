@@ -51,19 +51,19 @@ class SettingsActivity : BaseActivity() {
         }
 
         // ASR config
-        binding.etIflytekAppId.setText(prefs.getString(KEY_IFLYTEK_APP_ID, ""))
-        binding.etIflytekApiKey.setText(prefs.getString(KEY_IFLYTEK_API_KEY, ""))
-        binding.etIflytekApiSecret.setText(prefs.getString(KEY_IFLYTEK_API_SECRET, ""))
+        binding.etIflytekAppId.setText(prefs.getString(KEY_IFLYTEK_APP_ID, "05dd72b7"))
+        binding.etIflytekApiKey.setText(prefs.getString(KEY_IFLYTEK_API_KEY, "dba1e0a679fb39dfc2a89f4eefe12420"))
+        binding.etIflytekApiSecret.setText(prefs.getString(KEY_IFLYTEK_API_SECRET, "MzBkZjViMTdmMGU1MjNlZDA3NjQ0ZTgz"))
 
         // LLM config
         binding.etLlmEndpoint.setText(
-            prefs.getString(KEY_LLM_ENDPOINT, "https://api.openai.com/v1/chat/completions")
+            prefs.getString(KEY_LLM_ENDPOINT, "https://api.deepseek.com/v1/chat/completions")
         )
-        binding.etLlmApiKey.setText(prefs.getString(KEY_LLM_API_KEY, ""))
+        binding.etLlmApiKey.setText(prefs.getString(KEY_LLM_API_KEY, "sk-71b035d3a17e44a9b0a100182ade17a7"))
 
         // Backend URL
         binding.etBackendUrl.setText(
-            prefs.getString(KEY_BACKEND_URL, "http://10.0.2.2:8000")
+            prefs.getString(KEY_BACKEND_URL, "http://8.136.188.53:8000")
         )
 
         // Show/hide fields based on mode

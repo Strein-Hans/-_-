@@ -151,9 +151,9 @@ class PracticeActivity : BaseActivity() {
         }
 
         // ASR Provider — iFlytek
-        val iflytekAppId = prefs.getString(KEY_IFLYTEK_APP_ID, "") ?: ""
-        val iflytekApiKey = prefs.getString(KEY_IFLYTEK_API_KEY, "") ?: ""
-        val iflytekApiSecret = prefs.getString(KEY_IFLYTEK_API_SECRET, "") ?: ""
+        val iflytekAppId = prefs.getString(KEY_IFLYTEK_APP_ID, "05dd72b7").takeIf { !it.isNullOrBlank() } ?: "05dd72b7"
+        val iflytekApiKey = prefs.getString(KEY_IFLYTEK_API_KEY, "dba1e0a679fb39dfc2a89f4eefe12420").takeIf { !it.isNullOrBlank() } ?: "dba1e0a679fb39dfc2a89f4eefe12420"
+        val iflytekApiSecret = prefs.getString(KEY_IFLYTEK_API_SECRET, "MzBkZjViMTdmMGU1MjNlZDA3NjQ0ZTgz").takeIf { !it.isNullOrBlank() } ?: "MzBkZjViMTdmMGU1MjNlZDA3NjQ0ZTgz"
         val asr = CloudASRProvider(iflytekAppId, iflytekApiKey, iflytekApiSecret)
         asrProvider = asr
 
@@ -186,12 +186,12 @@ class PracticeActivity : BaseActivity() {
         val mode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE) ?: MODE_TEMPLATE
         val conversationProvider: ConversationProvider = when (mode) {
             MODE_BACKEND -> {
-                BackendApiClient.baseUrl = prefs.getString(KEY_BACKEND_URL, "http://10.0.2.2:8000") ?: "http://10.0.2.2:8000"
+                BackendApiClient.baseUrl = prefs.getString(KEY_BACKEND_URL, "http://8.136.188.53:8000") ?: "http://8.136.188.53:8000"
                 BackendConversationProvider()
             }
             MODE_LLM -> {
-                val endpoint = prefs.getString(KEY_LLM_ENDPOINT, "https://api.openai.com/v1/chat/completions") ?: ""
-                val apiKey = prefs.getString(KEY_LLM_API_KEY, "") ?: ""
+                val endpoint = prefs.getString(KEY_LLM_ENDPOINT, "https://api.deepseek.com/v1/chat/completions") ?: ""
+                val apiKey = prefs.getString(KEY_LLM_API_KEY, "sk-71b035d3a17e44a9b0a100182ade17a7") ?: ""
                 LLMConversationProvider(endpoint, apiKey)
             }
             else -> TemplateConversationProvider()
