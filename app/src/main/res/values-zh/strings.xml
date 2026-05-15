@@ -32,9 +32,12 @@
     <string name="conversation_mode">对话模式</string>
     <string name="mode_template">模板考官</string>
     <string name="mode_llm">AI考官（大模型）</string>
+    <string name="mode_backend">后端服务器</string>
+    <string name="backend_url_hint">后端地址（如 http://10.0.2.2:8000）</string>
 
     <!-- ASR Config -->
     <string name="asr_config">语音识别（讯飞）</string>
+    <string name="asr_not_configured">未配置语音识别。请在设置中填入讯飞（iFlytek）凭证。</string>
 
     <!-- LLM Config -->
     <string name="llm_config">AI考官设置</string>

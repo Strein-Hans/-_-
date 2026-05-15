@@ -60,7 +60,7 @@ class HomeActivity : BaseActivity() {
         }
 
         binding.tvHistory.setOnClickListener {
-            // TODO: HistoryActivity
+            startActivity(Intent(this, com.ielts.coach.ui.history.HistoryActivity::class.java))
         }
     }
 

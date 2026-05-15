@@ -44,15 +44,16 @@ class SettingsActivity : BaseActivity() {
 
         // Conversation mode
         val mode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE)
-        if (mode == MODE_LLM) {
-            binding.chipGroupMode.check(binding.chipLlm.id)
-        } else {
-            binding.chipGroupMode.check(binding.chipTemplate.id)
+        when (mode) {
+            MODE_BACKEND -> binding.chipGroupMode.check(binding.chipBackend.id)
+            MODE_LLM -> binding.chipGroupMode.check(binding.chipLlm.id)
+            else -> binding.chipGroupMode.check(binding.chipTemplate.id)
         }
 
         // ASR config
         binding.etIflytekAppId.setText(prefs.getString(KEY_IFLYTEK_APP_ID, ""))
         binding.etIflytekApiKey.setText(prefs.getString(KEY_IFLYTEK_API_KEY, ""))
+        binding.etIflytekApiSecret.setText(prefs.getString(KEY_IFLYTEK_API_SECRET, ""))
 
         // LLM config
         binding.etLlmEndpoint.setText(
@@ -60,13 +61,18 @@ class SettingsActivity : BaseActivity() {
         )
         binding.etLlmApiKey.setText(prefs.getString(KEY_LLM_API_KEY, ""))
 
-        // Show/hide LLM fields based on mode
-        updateLlmVisibility()
+        // Backend URL
+        binding.etBackendUrl.setText(
+            prefs.getString(KEY_BACKEND_URL, "http://10.0.2.2:8000")
+        )
+
+        // Show/hide fields based on mode
+        updateModeVisibility()
     }
 
     private fun setupListeners() {
-        binding.chipGroupMode.setOnCheckedChangeListener { _, checkedId ->
-            updateLlmVisibility()
+        binding.chipGroupMode.setOnCheckedChangeListener { _, _ ->
+            updateModeVisibility()
         }
 
         binding.btnSave.setOnClickListener {
@@ -81,16 +87,24 @@ class SettingsActivity : BaseActivity() {
             LocaleHelper.saveLanguage(this, lang)
 
             // Conversation mode
-            val mode = if (binding.chipLlm.isChecked) MODE_LLM else MODE_TEMPLATE
+            val mode = when {
+                binding.chipBackend.isChecked -> MODE_BACKEND
+                binding.chipLlm.isChecked -> MODE_LLM
+                else -> MODE_TEMPLATE
+            }
             prefs.putString(KEY_CONVERSATION_MODE, mode)
 
             // ASR
             prefs.putString(KEY_IFLYTEK_APP_ID, binding.etIflytekAppId.text.toString())
             prefs.putString(KEY_IFLYTEK_API_KEY, binding.etIflytekApiKey.text.toString())
+            prefs.putString(KEY_IFLYTEK_API_SECRET, binding.etIflytekApiSecret.text.toString())
 
             // LLM
             prefs.putString(KEY_LLM_ENDPOINT, binding.etLlmEndpoint.text.toString())
             prefs.putString(KEY_LLM_API_KEY, binding.etLlmApiKey.text.toString())
+
+            // Backend URL
+            prefs.putString(KEY_BACKEND_URL, binding.etBackendUrl.text.toString())
 
             prefs.apply()
             Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show()
@@ -102,11 +116,15 @@ class SettingsActivity : BaseActivity() {
         }
     }
 
-    private fun updateLlmVisibility() {
+    private fun updateModeVisibility() {
         val isLlm = binding.chipLlm.isChecked
+        val isBackend = binding.chipBackend.isChecked
+
         binding.tvLlmLabel.visibility = if (isLlm) View.VISIBLE else View.GONE
         binding.tilLlmEndpoint.visibility = if (isLlm) View.VISIBLE else View.GONE
         binding.tilLlmApiKey.visibility = if (isLlm) View.VISIBLE else View.GONE
+
+        binding.tilBackendUrl.visibility = if (isBackend) View.VISIBLE else View.GONE
     }
 
     companion object {
@@ -115,10 +133,13 @@ class SettingsActivity : BaseActivity() {
         private const val KEY_CONVERSATION_MODE = "conversation_mode"
         private const val KEY_IFLYTEK_APP_ID = "iflytek_app_id"
         private const val KEY_IFLYTEK_API_KEY = "iflytek_api_key"
+        private const val KEY_IFLYTEK_API_SECRET = "iflytek_api_secret"
         private const val KEY_LLM_ENDPOINT = "llm_endpoint"
         private const val KEY_LLM_API_KEY = "llm_api_key"
+        private const val KEY_BACKEND_URL = "backend_url"
 
         private const val MODE_TEMPLATE = "template"
         private const val MODE_LLM = "llm"
+        private const val MODE_BACKEND = "backend"
     }
 }

@@ -32,9 +32,12 @@
     <string name="conversation_mode">Conversation Mode</string>
     <string name="mode_template">Template Examiner</string>
     <string name="mode_llm">AI Examiner (LLM)</string>
+    <string name="mode_backend">Backend Server</string>
+    <string name="backend_url_hint">Backend URL (e.g. http://10.0.2.2:8000)</string>
 
     <!-- ASR Config -->
     <string name="asr_config">Speech Recognition (iFlytek)</string>
+    <string name="asr_not_configured">Speech recognition not configured. Please set up iFlytek credentials in Settings.</string>
 
     <!-- LLM Config -->
     <string name="llm_config">AI Examiner Settings</string>

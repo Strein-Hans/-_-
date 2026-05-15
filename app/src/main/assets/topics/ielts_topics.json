@@ -202,5 +202,736 @@
       "Do you think developing countries should prioritize the economy over the environment?"
     ],
     "difficulty": 4
+  },
+  {
+    "id": "topic_013",
+    "category": "Culture",
+    "topic": "Describe a tradition in your country that you think is worth preserving.",
+    "bulletPoints": [
+      "What the tradition is",
+      "How long it has been practiced",
+      "How people take part in it",
+      "Why you think it should be preserved"
+    ],
+    "followUpQuestions": [
+      "Why do some traditions disappear over time?",
+      "How can young people be encouraged to keep traditions alive?",
+      "Do you think globalization threatens local cultures?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_014",
+    "category": "Health",
+    "topic": "Describe something you do to stay healthy.",
+    "bulletPoints": [
+      "What you do",
+      "How often you do it",
+      "When you started doing it",
+      "How it benefits your health"
+    ],
+    "followUpQuestions": [
+      "Do you think people in your country are generally healthy?",
+      "Should governments do more to promote healthy lifestyles?",
+      "How has the way people think about health changed in recent years?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_015",
+    "category": "Media",
+    "topic": "Describe a film or movie that made a strong impression on you.",
+    "bulletPoints": [
+      "What the film was",
+      "When you watched it",
+      "What it was about",
+      "Why it made a strong impression"
+    ],
+    "followUpQuestions": [
+      "Do you think films can change people's attitudes?",
+      "How have streaming services changed the way we watch movies?",
+      "Should films be used as educational tools in schools?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_016",
+    "category": "Work",
+    "topic": "Describe a job you would like to have in the future.",
+    "bulletPoints": [
+      "What the job is",
+      "What qualifications you would need",
+      "What you would do in this job",
+      "Why you are attracted to this career"
+    ],
+    "followUpQuestions": [
+      "Do you think job satisfaction is more important than salary?",
+      "How might artificial intelligence change the job market?",
+      "Is it common for people in your country to change careers?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_017",
+    "category": "Travel",
+    "topic": "Describe a place you visited that exceeded your expectations.",
+    "bulletPoints": [
+      "Where you went",
+      "What you expected before going",
+      "What it was actually like",
+      "Why it exceeded your expectations"
+    ],
+    "followUpQuestions": [
+      "Do you think it is better to read about a place before visiting or go with no expectations?",
+      "How has tourism changed in your country over the past decade?",
+      "What are the negative effects of overtourism?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_018",
+    "category": "Food",
+    "topic": "Describe a dish from your country that you would recommend to a visitor.",
+    "bulletPoints": [
+      "What the dish is called",
+      "What ingredients are used",
+      "How it is prepared",
+      "Why you would recommend it"
+    ],
+    "followUpQuestions": [
+      "How important is food in your country's culture?",
+      "Do you think traditional cooking will survive the rise of fast food?",
+      "Should food education be part of the school curriculum?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_019",
+    "category": "Sports",
+    "topic": "Describe a sport you enjoy watching or playing.",
+    "bulletPoints": [
+      "What the sport is",
+      "How often you watch or play it",
+      "What you like about it",
+      "How it makes you feel"
+    ],
+    "followUpQuestions": [
+      "Should more money be invested in sports at school level?",
+      "Do professional athletes earn too much money?",
+      "How has technology changed the way we experience sports?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_020",
+    "category": "Art",
+    "topic": "Describe a piece of art or a work of art that you like.",
+    "bulletPoints": [
+      "What the artwork is",
+      "Where you saw it",
+      "What it looks like",
+      "Why you like it"
+    ],
+    "followUpQuestions": [
+      "Should art be included in school curricula?",
+      "How has technology changed the way art is created?",
+      "Do you think art should be publicly funded?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_021",
+    "category": "People",
+    "topic": "Describe a teacher who had a positive impact on your education.",
+    "bulletPoints": [
+      "Who the teacher was",
+      "What subject they taught",
+      "How they taught differently from others",
+      "Why they had a positive impact on you"
+    ],
+    "followUpQuestions": [
+      "What makes someone an effective teacher?",
+      "Do you think teaching is a respected profession in your country?",
+      "How will the role of teachers change with online education?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_022",
+    "category": "Place",
+    "topic": "Describe a historical building you have visited.",
+    "bulletPoints": [
+      "Where the building is located",
+      "What it looks like",
+      "What its historical significance is",
+      "How you felt when you visited it"
+    ],
+    "followUpQuestions": [
+      "Should governments spend money on preserving old buildings?",
+      "How does architecture reflect the culture of a society?",
+      "Do you think modern buildings lack character compared to older ones?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_023",
+    "category": "Object",
+    "topic": "Describe an item of clothing that you wear on special occasions.",
+    "bulletPoints": [
+      "What the item is",
+      "What it looks like",
+      "When you wear it",
+      "How you feel when you wear it"
+    ],
+    "followUpQuestions": [
+      "How important is fashion in your culture?",
+      "Do you think people judge others based on their clothes?",
+      "Has the fashion industry become too focused on fast fashion?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_024",
+    "category": "Event",
+    "topic": "Describe a wedding you attended that was memorable.",
+    "bulletPoints": [
+      "Whose wedding it was",
+      "Where it took place",
+      "What happened during the ceremony",
+      "Why it was memorable"
+    ],
+    "followUpQuestions": [
+      "How have wedding customs changed in your country?",
+      "Do you think weddings have become too commercialized?",
+      "Is it better to have a large wedding or a small one?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_025",
+    "category": "Experience",
+    "topic": "Describe a difficult challenge you have overcome.",
+    "bulletPoints": [
+      "What the challenge was",
+      "When it happened",
+      "How you dealt with it",
+      "What you learned from the experience"
+    ],
+    "followUpQuestions": [
+      "Do you think facing challenges makes people stronger?",
+      "Should parents let children face difficulties on their own?",
+      "How can schools prepare students for real-life challenges?"
+    ],
+    "difficulty": 4
+  },
+  {
+    "id": "topic_026",
+    "category": "Education",
+    "topic": "Describe a school rule you thought was unfair or unreasonable.",
+    "bulletPoints": [
+      "What the rule was",
+      "Why the school made this rule",
+      "How students reacted to it",
+      "Why you thought it was unfair"
+    ],
+    "followUpQuestions": [
+      "Do strict school rules help students or hold them back?",
+      "Should students have a say in making school rules?",
+      "How do school rules in your country compare to other countries?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_027",
+    "category": "Technology",
+    "topic": "Describe an app on your phone that you find very useful.",
+    "bulletPoints": [
+      "What the app is",
+      "What it does",
+      "How often you use it",
+      "How it has improved your life"
+    ],
+    "followUpQuestions": [
+      "Do you think people spend too much time on their phones?",
+      "Should there be age restrictions for using certain apps?",
+      "How do you think apps will change our lives in the future?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_028",
+    "category": "Environment",
+    "topic": "Describe a natural area in your country that you think is beautiful.",
+    "bulletPoints": [
+      "Where this area is",
+      "What it looks like",
+      "What wildlife or plants can be found there",
+      "Why you think it is beautiful"
+    ],
+    "followUpQuestions": [
+      "Should more be done to protect natural landscapes?",
+      "How does spending time in nature affect people's wellbeing?",
+      "Do you think ecotourism helps or harms the environment?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_029",
+    "category": "Culture",
+    "topic": "Describe a type of music that is popular in your country.",
+    "bulletPoints": [
+      "What type of music it is",
+      "Who typically listens to it",
+      "Where it is usually played",
+      "Why it is popular"
+    ],
+    "followUpQuestions": [
+      "How has technology changed the way people listen to music?",
+      "Do you think traditional music will survive alongside modern music?",
+      "Should music be taught as a compulsory subject in schools?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_030",
+    "category": "Health",
+    "topic": "Describe a time when you or someone you know was ill.",
+    "bulletPoints": [
+      "What the illness was",
+      "How it affected daily life",
+      "What treatment was needed",
+      "How long it took to recover"
+    ],
+    "followUpQuestions": [
+      "How could healthcare be improved in your country?",
+      "Do you think people take their health for granted?",
+      "Should employers provide more support for sick employees?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_031",
+    "category": "Media",
+    "topic": "Describe a TV series or show you enjoy watching.",
+    "bulletPoints": [
+      "What the show is called",
+      "What it is about",
+      "Who the main characters are",
+      "Why you enjoy watching it"
+    ],
+    "followUpQuestions": [
+      "Do you think television has improved or declined in quality?",
+      "How does binge-watching affect people's viewing experience?",
+      "Should parents control what their children watch on TV?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_032",
+    "category": "Work",
+    "topic": "Describe a project or assignment you completed successfully.",
+    "bulletPoints": [
+      "What the project was",
+      "How long it took",
+      "What challenges you faced",
+      "What the result was"
+    ],
+    "followUpQuestions": [
+      "Is teamwork or individual work more effective?",
+      "How important is time management in completing projects?",
+      "Do you think schools prepare students for workplace projects?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_033",
+    "category": "Travel",
+    "topic": "Describe a country you would like to visit that you have never been to.",
+    "bulletPoints": [
+      "Which country it is",
+      "What you know about it",
+      "What you would like to do there",
+      "Why you want to visit this country"
+    ],
+    "followUpQuestions": [
+      "What are the benefits of traveling to different countries?",
+      "Do you think travel broadens the mind?",
+      "How can travel contribute to better understanding between cultures?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_034",
+    "category": "Food",
+    "topic": "Describe a restaurant you have enjoyed going to.",
+    "bulletPoints": [
+      "Where the restaurant is",
+      "What type of food it serves",
+      "What the atmosphere is like",
+      "Why you enjoy going there"
+    ],
+    "followUpQuestions": [
+      "Do you prefer eating at home or eating out?",
+      "How have restaurants in your country changed over the years?",
+      "Should restaurants be required to display nutritional information?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_035",
+    "category": "Sports",
+    "topic": "Describe an outdoor activity you enjoy doing.",
+    "bulletPoints": [
+      "What the activity is",
+      "Where you do it",
+      "Who you do it with",
+      "Why you enjoy it"
+    ],
+    "followUpQuestions": [
+      "Should children spend more time outdoors?",
+      "How does outdoor exercise compare to indoor exercise?",
+      "What prevents people from spending time outdoors in cities?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_036",
+    "category": "Art",
+    "topic": "Describe a museum or gallery you have visited.",
+    "bulletPoints": [
+      "Where it is located",
+      "What kind of exhibits it has",
+      "What you saw there",
+      "What you thought of the experience"
+    ],
+    "followUpQuestions": [
+      "Should museums be free for the public?",
+      "How can museums attract more young visitors?",
+      "Do virtual museum tours offer the same experience as visiting in person?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_037",
+    "category": "People",
+    "topic": "Describe a friend you have known for a long time.",
+    "bulletPoints": [
+      "Who this friend is",
+      "How you first met",
+      "What you have in common",
+      "Why your friendship has lasted so long"
+    ],
+    "followUpQuestions": [
+      "Is it easier or harder to maintain friendships in the modern world?",
+      "Do you think online friendships can be as strong as face-to-face ones?",
+      "How do friendships change as people get older?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_038",
+    "category": "Place",
+    "topic": "Describe your ideal home or house.",
+    "bulletPoints": [
+      "What kind of house it would be",
+      "Where it would be located",
+      "What rooms or features it would have",
+      "Why this would be your ideal home"
+    ],
+    "followUpQuestions": [
+      "How have people's ideas about ideal homes changed?",
+      "Do you think it is better to rent or buy a home?",
+      "How will homes change in the next fifty years?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_039",
+    "category": "Object",
+    "topic": "Describe an electronic device you own that is important to you.",
+    "bulletPoints": [
+      "What the device is",
+      "When you got it",
+      "What you use it for",
+      "Why it is important to you"
+    ],
+    "followUpQuestions": [
+      "Do you think electronic devices have made life more convenient?",
+      "What are the negative effects of relying on electronic devices?",
+      "Should there be limits on screen time for children?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_040",
+    "category": "Event",
+    "topic": "Describe a concert or live performance you attended.",
+    "bulletPoints": [
+      "What the performance was",
+      "Where it took place",
+      "Who you went with",
+      "What you thought of it"
+    ],
+    "followUpQuestions": [
+      "Do you think live performances are better than recorded ones?",
+      "How has the music industry changed because of the internet?",
+      "Should the government support the performing arts?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_041",
+    "category": "Experience",
+    "topic": "Describe a mistake you made and what you learned from it.",
+    "bulletPoints": [
+      "What the mistake was",
+      "When it happened",
+      "What the consequences were",
+      "What you learned from it"
+    ],
+    "followUpQuestions": [
+      "Do you think making mistakes is an important part of learning?",
+      "Should schools encourage students to learn from failure?",
+      "How do cultural attitudes toward failure differ around the world?"
+    ],
+    "difficulty": 4
+  },
+  {
+    "id": "topic_042",
+    "category": "Education",
+    "topic": "Describe a course or subject you enjoyed studying at school or university.",
+    "bulletPoints": [
+      "What the subject was",
+      "Who taught it",
+      "What you learned",
+      "Why you enjoyed it"
+    ],
+    "followUpQuestions": [
+      "Do you think the education system in your country needs reform?",
+      "How important is practical learning compared to theoretical learning?",
+      "Should students have more freedom to choose what they study?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_043",
+    "category": "Technology",
+    "topic": "Describe how artificial intelligence has affected something in your life.",
+    "bulletPoints": [
+      "What aspect of AI you are describing",
+      "How you first encountered it",
+      "How it has changed your routine",
+      "Whether you think this change is positive or negative"
+    ],
+    "followUpQuestions": [
+      "Do you think AI will replace more jobs than it creates?",
+      "Should there be laws regulating the use of artificial intelligence?",
+      "How can people prepare for a world with more AI?"
+    ],
+    "difficulty": 4
+  },
+  {
+    "id": "topic_044",
+    "category": "Environment",
+    "topic": "Describe a change you have made to be more environmentally friendly.",
+    "bulletPoints": [
+      "What change you made",
+      "Why you decided to make it",
+      "How easy or difficult it was",
+      "What impact it has had"
+    ],
+    "followUpQuestions": [
+      "Do you think individual actions can make a real difference to the environment?",
+      "Should governments introduce stricter environmental regulations?",
+      "How can businesses be encouraged to adopt sustainable practices?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_045",
+    "category": "Culture",
+    "topic": "Describe a custom from another country that you find interesting.",
+    "bulletPoints": [
+      "What the custom is",
+      "Which country it comes from",
+      "How you learned about it",
+      "Why you find it interesting"
+    ],
+    "followUpQuestions": [
+      "Why is it important to learn about other cultures?",
+      "Do you think cultural differences are becoming smaller due to globalization?",
+      "Should intercultural communication be taught in schools?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_046",
+    "category": "Health",
+    "topic": "Describe a habit you have that helps you manage stress.",
+    "bulletPoints": [
+      "What the habit is",
+      "When you started it",
+      "How it helps you manage stress",
+      "Whether you would recommend it to others"
+    ],
+    "followUpQuestions": [
+      "Do you think stress is a bigger problem now than in the past?",
+      "Should employers do more to help employees manage stress?",
+      "How can society reduce the stigma around mental health issues?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_047",
+    "category": "Media",
+    "topic": "Describe a news story that caught your attention recently.",
+    "bulletPoints": [
+      "What the story was about",
+      "When you heard about it",
+      "How you found out about it",
+      "Why it caught your attention"
+    ],
+    "followUpQuestions": [
+      "Do you trust the news media to report stories accurately?",
+      "How has social media changed the way people consume news?",
+      "Should journalists be more strictly regulated?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_048",
+    "category": "Work",
+    "topic": "Describe a person you have worked with who you admired.",
+    "bulletPoints": [
+      "Who this person was",
+      "What their role was",
+      "What qualities they had",
+      "Why you admired them"
+    ],
+    "followUpQuestions": [
+      "What makes a good leader in the workplace?",
+      "How important is teamwork in achieving professional goals?",
+      "Has the nature of work changed significantly in your country?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_049",
+    "category": "Travel",
+    "topic": "Describe a memorable holiday you have had.",
+    "bulletPoints": [
+      "Where you went",
+      "Who you went with",
+      "What you did during the holiday",
+      "Why it was memorable"
+    ],
+    "followUpQuestions": [
+      "Do you prefer relaxing holidays or active holidays?",
+      "How do you think holidays will change in the future?",
+      "Is it important for families to go on holiday together?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_050",
+    "category": "Food",
+    "topic": "Describe a meal you had that was prepared for a special occasion.",
+    "bulletPoints": [
+      "What the occasion was",
+      "What food was served",
+      "Who prepared the meal",
+      "How you felt about the meal"
+    ],
+    "followUpQuestions": [
+      "Do you think cooking is an important life skill?",
+      "How has the food industry changed with the rise of food delivery apps?",
+      "Should cooking be taught in schools?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_051",
+    "category": "Sports",
+    "topic": "Describe a sporting event you have attended or watched on television.",
+    "bulletPoints": [
+      "What the event was",
+      "Where it took place",
+      "Who was competing",
+      "What made it exciting or memorable"
+    ],
+    "followUpQuestions": [
+      "Do international sporting events bring countries together?",
+      "Should hosting major sporting events be a priority for countries?",
+      "How has the commercialization of sport affected its spirit?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_052",
+    "category": "Art",
+    "topic": "Describe a photograph that is important to you.",
+    "bulletPoints": [
+      "What the photograph shows",
+      "When and where it was taken",
+      "Who took it",
+      "Why it is important to you"
+    ],
+    "followUpQuestions": [
+      "Has photography become too easy with smartphones?",
+      "Do you think people take too many photos instead of enjoying the moment?",
+      "How has photo editing changed people's perception of reality?"
+    ],
+    "difficulty": 2
+  },
+  {
+    "id": "topic_053",
+    "category": "People",
+    "topic": "Describe an elderly person you know and admire.",
+    "bulletPoints": [
+      "Who this person is",
+      "How you know them",
+      "What kind of life they have led",
+      "Why you admire them"
+    ],
+    "followUpQuestions": [
+      "How are elderly people treated in your country?",
+      "Do you think older generations have wisdom that younger people lack?",
+      "How can society better support its aging population?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_054",
+    "category": "Education",
+    "topic": "Describe an important exam you have taken.",
+    "bulletPoints": [
+      "What the exam was for",
+      "How you prepared for it",
+      "How you felt during the exam",
+      "What the result was"
+    ],
+    "followUpQuestions": [
+      "Do you think exams are the best way to assess students?",
+      "How could the examination system be improved?",
+      "Do exams cause too much stress for students?"
+    ],
+    "difficulty": 3
+  },
+  {
+    "id": "topic_055",
+    "category": "Experience",
+    "topic": "Describe a time when you helped someone with a problem.",
+    "bulletPoints": [
+      "Who you helped",
+      "What the problem was",
+      "How you helped them",
+      "How you felt afterwards"
+    ],
+    "followUpQuestions": [
+      "Should helping others be taught as a value in schools?",
+      "Do you think people are less willing to help strangers nowadays?",
+      "How can communities encourage people to support one another?"
+    ],
+    "difficulty": 3
   }
 ]

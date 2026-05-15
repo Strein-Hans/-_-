@@ -39,6 +39,10 @@
             android:name="com.ielts.coach.ui.report.ReportActivity"
             android:exported="false" />
 
+        <activity
+            android:name="com.ielts.coach.ui.history.HistoryActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

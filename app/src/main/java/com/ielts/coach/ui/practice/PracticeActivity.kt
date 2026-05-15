@@ -1,13 +1,18 @@
 package com.ielts.coach.ui.practice
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.ielts.coach.R
 import com.ielts.coach.data.model.*
@@ -17,9 +22,16 @@ import com.ielts.coach.engine.IELTSConversationEngine
 import com.ielts.coach.engine.asr.ASRProvider
 import com.ielts.coach.engine.asr.CloudASRProvider
 import com.ielts.coach.engine.conversation.ConversationProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.ielts.coach.data.local.AppDatabase
+import com.ielts.coach.data.local.entity.SessionEntity
+import com.ielts.coach.engine.api.BackendApiClient
+import com.ielts.coach.engine.conversation.BackendConversationProvider
 import com.ielts.coach.engine.conversation.LLMConversationProvider
 import com.ielts.coach.engine.conversation.TemplateConversationProvider
 import com.ielts.coach.engine.dh.DuixMobileManager
+import com.ielts.coach.engine.scoring.BackendScoringProvider
 import com.ielts.coach.engine.scoring.LocalScoringProvider
 import com.ielts.coach.engine.scoring.ScoringResult
 import com.ielts.coach.engine.tts.AndroidTTSProvider
@@ -46,6 +58,7 @@ class PracticeActivity : BaseActivity() {
     private var asrHideRunnable: Runnable? = null
     private var isFinishing = false
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         keepScreenOn()
@@ -55,9 +68,38 @@ class PracticeActivity : BaseActivity() {
 
         setupAudio()
         parseIntent()
-        initEngines()
-        setupUI()
-        connectAndStart()
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            initEngines()
+            setupUI()
+            connectAndStart()
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                REQUEST_RECORD_AUDIO
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_RECORD_AUDIO) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initEngines()
+                setupUI()
+                connectAndStart()
+            } else {
+                Toast.makeText(this, "需要麦克风权限才能使用口语练习功能", Toast.LENGTH_LONG).show()
+                finish()
+            }
+        }
     }
 
     private fun setupAudio() {
@@ -104,10 +146,15 @@ class PracticeActivity : BaseActivity() {
             }
         }
 
+        if (voiceOnlyMode) {
+            binding.renderDigitalHuman.visibility = View.GONE
+        }
+
         // ASR Provider — iFlytek
         val iflytekAppId = prefs.getString(KEY_IFLYTEK_APP_ID, "") ?: ""
         val iflytekApiKey = prefs.getString(KEY_IFLYTEK_API_KEY, "") ?: ""
-        val asr = CloudASRProvider(iflytekAppId, iflytekApiKey)
+        val iflytekApiSecret = prefs.getString(KEY_IFLYTEK_API_SECRET, "") ?: ""
+        val asr = CloudASRProvider(iflytekAppId, iflytekApiKey, iflytekApiSecret)
         asrProvider = asr
 
         // TTS Provider — Android TTS
@@ -135,17 +182,27 @@ class PracticeActivity : BaseActivity() {
             }
         })
 
-        // Conversation Provider — Template or LLM
+        // Conversation Provider — Template, LLM, or Backend
         val mode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE) ?: MODE_TEMPLATE
-        val conversationProvider = if (mode == MODE_LLM) {
-            val endpoint = prefs.getString(KEY_LLM_ENDPOINT, "https://api.openai.com/v1/chat/completions") ?: ""
-            val apiKey = prefs.getString(KEY_LLM_API_KEY, "") ?: ""
-            LLMConversationProvider(endpoint, apiKey)
-        } else {
-            TemplateConversationProvider()
+        val conversationProvider: ConversationProvider = when (mode) {
+            MODE_BACKEND -> {
+                BackendApiClient.baseUrl = prefs.getString(KEY_BACKEND_URL, "http://10.0.2.2:8000") ?: "http://10.0.2.2:8000"
+                BackendConversationProvider()
+            }
+            MODE_LLM -> {
+                val endpoint = prefs.getString(KEY_LLM_ENDPOINT, "https://api.openai.com/v1/chat/completions") ?: ""
+                val apiKey = prefs.getString(KEY_LLM_API_KEY, "") ?: ""
+                LLMConversationProvider(endpoint, apiKey)
+            }
+            else -> TemplateConversationProvider()
         }
 
-        val scoringProvider = LocalScoringProvider()
+        val useBackendScoring = mode == MODE_BACKEND
+        val scoringProvider = if (useBackendScoring) {
+            BackendScoringProvider()
+        } else {
+            LocalScoringProvider()
+        }
 
         val engine = IELTSConversationEngine(
             asrProvider = asr,
@@ -189,7 +246,26 @@ class PracticeActivity : BaseActivity() {
             }
 
             override fun onMonologueEnd() {
-                runOnUiThread { updateTimer(-1) }
+                runOnUiThread {
+                    updateTimer(-1)
+                    if (isFullMock) {
+                        conversationEngine?.onPart2MonologueEnd()
+                    }
+                }
+            }
+
+            override fun onFullMockTransition(nextPart: IELTSPart) {
+                runOnUiThread {
+                    updatePartLabel(nextPart)
+                    if (nextPart == IELTSPart.PART_2) {
+                        val topic = currentTopic ?: TopicRepository(this@PracticeActivity).loadTopics().randomOrNull() ?: return@runOnUiThread
+                        showTopicCard(topic)
+                        conversationEngine?.startPreparation()
+                    }
+                    if (nextPart == IELTSPart.PART_3) {
+                        binding.cardTopic.visibility = View.GONE
+                    }
+                }
             }
 
             override fun onScoringComplete(result: ScoringResult) {
@@ -210,17 +286,29 @@ class PracticeActivity : BaseActivity() {
 
     private fun connectAndStart() {
         val engine = conversationEngine ?: return
-        when (currentPart) {
-            IELTSPart.PART_1 -> engine.startPart1()
-            IELTSPart.PART_2 -> {
-                val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
-                engine.startPart2(topic)
-                showTopicCard(topic)
-                engine.startPreparation()
-            }
-            IELTSPart.PART_3 -> {
-                val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
-                engine.startPart3(topic)
+
+        // Check ASR credentials before starting
+        if (asrProvider != null && !asrProvider!!.isAvailable()) {
+            showError(getString(R.string.asr_not_configured))
+            return
+        }
+
+        if (isFullMock) {
+            val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
+            engine.startFullMock(topic)
+        } else {
+            when (currentPart) {
+                IELTSPart.PART_1 -> engine.startPart1()
+                IELTSPart.PART_2 -> {
+                    val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
+                    engine.startPart2(topic)
+                    showTopicCard(topic)
+                    engine.startPreparation()
+                }
+                IELTSPart.PART_3 -> {
+                    val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
+                    engine.startPart3(topic)
+                }
             }
         }
     }
@@ -295,6 +383,23 @@ class PracticeActivity : BaseActivity() {
         engine.endSessionAndScore { report ->
             runOnUiThread {
                 if (report != null) {
+                    // Save to Room
+                    lifecycleScope.launch {
+                        val entity = SessionEntity(
+                            sessionId = report.sessionId,
+                            part = report.part,
+                            score = report.score,
+                            userTranscript = report.userTranscript,
+                            examinerTranscript = report.examinerTranscript,
+                            wordCount = report.wordCount,
+                            durationSeconds = report.durationSeconds,
+                            strengths = report.strengths,
+                            improvements = report.improvements,
+                            overallFeedback = report.overallFeedback,
+                            timestamp = report.timestamp,
+                        )
+                        AppDatabase.getInstance(this@PracticeActivity).sessionDao().insert(entity)
+                    }
                     val intent = Intent(this, ReportActivity::class.java)
                     intent.putExtra(ReportActivity.EXTRA_REPORT, Gson().toJson(report))
                     startActivity(intent)
@@ -313,6 +418,7 @@ class PracticeActivity : BaseActivity() {
     }
 
     companion object {
+        private const val REQUEST_RECORD_AUDIO = 1001
         private const val TAG = "PracticeActivity"
         const val EXTRA_PART = "extra_part"
         const val EXTRA_TOPIC_ID = "extra_topic_id"
@@ -323,11 +429,14 @@ class PracticeActivity : BaseActivity() {
         private const val KEY_MODEL_NAME = "model_name"
         private const val KEY_IFLYTEK_APP_ID = "iflytek_app_id"
         private const val KEY_IFLYTEK_API_KEY = "iflytek_api_key"
+        private const val KEY_IFLYTEK_API_SECRET = "iflytek_api_secret"
         private const val KEY_CONVERSATION_MODE = "conversation_mode"
         private const val KEY_LLM_ENDPOINT = "llm_endpoint"
         private const val KEY_LLM_API_KEY = "llm_api_key"
+        private const val KEY_BACKEND_URL = "backend_url"
 
         private const val MODE_TEMPLATE = "template"
+        private const val MODE_BACKEND = "backend"
         private const val MODE_LLM = "llm"
     }
 }

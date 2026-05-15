@@ -32,6 +32,7 @@ class IELTSConversationEngine(
         fun onMonologueEnd() {}
         fun onScoringComplete(result: ScoringResult) {}
         fun onSessionCompleted(report: ScoringReport) {}
+        fun onFullMockTransition(nextPart: IELTSPart) {}
         fun onError(msg: String) {}
     }
 
@@ -39,6 +40,10 @@ class IELTSConversationEngine(
     private var currentSession: SpeakingSession? = null
     private var currentPart = IELTSPart.PART_1
     private var isRunning = false
+    private var isFullMock = false
+    private val mockSessions = mutableListOf<SpeakingSession>()
+    private var mockTopic: IELTSTopic? = null
+    private var mockPart1TurnCount = 0
 
     private val asrBuffer = StringBuilder()
     private val handler = Handler(Looper.getMainLooper())
@@ -51,6 +56,45 @@ class IELTSConversationEngine(
 
     fun setCallback(cb: ConversationCallback) {
         callback = cb
+    }
+
+    // ── Full Mock Test ────────────────────────────────────────────
+
+    fun startFullMock(topic: IELTSTopic) {
+        isFullMock = true
+        mockTopic = topic
+        mockSessions.clear()
+        mockPart1TurnCount = 0
+        callback?.onSessionStarted(IELTSPart.PART_1)
+        startPart1()
+    }
+
+    private fun advanceFullMock() {
+        if (!isFullMock) return
+        when (currentPart) {
+            IELTSPart.PART_1 -> {
+                mockPart1TurnCount++
+                if (mockPart1TurnCount >= 4) {
+                    // Transition to Part 2
+                    currentSession?.let { mockSessions.add(it) }
+                    callback?.onFullMockTransition(IELTSPart.PART_2)
+                    startPart2(mockTopic ?: return)
+                }
+            }
+            IELTSPart.PART_2 -> {
+                // Part 2 ends after monologue, transition handled by PracticeActivity
+            }
+            IELTSPart.PART_3 -> {
+                // Part 3 scoring handled by endSessionAndScore
+            }
+        }
+    }
+
+    fun onPart2MonologueEnd() {
+        if (!isFullMock) return
+        currentSession?.let { mockSessions.add(it) }
+        callback?.onFullMockTransition(IELTSPart.PART_3)
+        startPart3(mockTopic ?: return)
     }
 
     // ── Part 1: Introduction & Interview ──────────────────────────
@@ -177,6 +221,7 @@ class IELTSConversationEngine(
             currentSession?.userResponses?.map { it.text } ?: emptyList(),
         ) { response ->
             handleExaminerResponse(response)
+            if (isFullMock) advanceFullMock()
         }
     }
 
@@ -222,6 +267,7 @@ class IELTSConversationEngine(
         }
 
         isRunning = false
+        isFullMock = false
         asrBuffer.clear()
         asrProvider.stopListening()
         ttsProvider.stop()
