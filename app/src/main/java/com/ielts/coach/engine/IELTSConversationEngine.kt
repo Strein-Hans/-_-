@@ -39,17 +39,22 @@ class IELTSConversationEngine(
     private var callback: ConversationCallback? = null
     private var currentSession: SpeakingSession? = null
     private var currentPart = IELTSPart.PART_1
-    private var isRunning = false
+    var isRunning = false
+        private set
     private var isFullMock = false
     private val mockSessions = mutableListOf<SpeakingSession>()
     private var mockTopic: IELTSTopic? = null
     private var mockPart1TurnCount = 0
 
     private val asrBuffer = StringBuilder()
+    private var latestPartialText = ""
+    private var asrFinalized = false
     private val handler = Handler(Looper.getMainLooper())
 
     private var prepRunnable: Runnable? = null
     private var monologueRunnable: Runnable? = null
+    private var asrSilenceRunnable: Runnable? = null
+    private var asrMaxTimeoutRunnable: Runnable? = null
 
     // Track examiner responses for transcript
     private val examinerTextBuffer = StringBuilder()
@@ -101,8 +106,9 @@ class IELTSConversationEngine(
 
     fun startPart1() {
         startSession(IELTSPart.PART_1, null)
-        // Kick off with first examiner question
+        Log.e(TAG, "startPart1: getting first question")
         conversationProvider.getResponse("", IELTSPart.PART_1, null, emptyList()) { response ->
+            Log.e(TAG, "Got examiner response: ${response.take(50)}")
             handleExaminerResponse(response)
         }
     }
@@ -171,20 +177,22 @@ class IELTSConversationEngine(
 
     private val asrCallback = object : ASRProvider.ASRCallback {
         override fun onPartialResult(text: String) {
-            asrBuffer.append(text).append(" ")
+            latestPartialText = text
             callback?.onUserAsrPartial(text)
+            resetAsrSilenceTimer()
         }
 
         override fun onFinalResult(text: String) {
-            val fullText = if (asrBuffer.isNotBlank()) asrBuffer.toString().trim() else text
-            asrBuffer.clear()
+            cancelAsrTimers()
+            if (asrFinalized) return
+            asrFinalized = true
+            val fullText = text.trim().ifBlank { latestPartialText.trim() }
             if (fullText.isEmpty()) return
 
-            Log.d(TAG, "User said: $fullText")
+            Log.d(TAG, "User said (final): $fullText")
             callback?.onUserAsrFinal(fullText)
             currentSession?.userResponses?.add(UserResponse(fullText))
 
-            // Get examiner response
             conversationProvider.getResponse(
                 fullText,
                 currentPart,
@@ -192,13 +200,61 @@ class IELTSConversationEngine(
                 currentSession?.userResponses?.map { it.text } ?: emptyList(),
             ) { response ->
                 handleExaminerResponse(response)
+                if (isFullMock) advanceFullMock()
             }
         }
 
         override fun onError(error: String) {
             Log.e(TAG, "ASR error: $error")
-            callback?.onError(error)
+            // If we have partial text, auto-finalize instead of showing error
+            if (!asrFinalized && latestPartialText.isNotBlank()) {
+                Log.d(TAG, "Auto-finalizing from partial on error")
+                finalizeFromPartial()
+            } else if (!asrFinalized) {
+                callback?.onError(error)
+            }
         }
+    }
+
+    private fun resetAsrSilenceTimer() {
+        asrSilenceRunnable?.let { handler.removeCallbacks(it) }
+        asrSilenceRunnable = Runnable {
+            if (!asrFinalized && latestPartialText.isNotBlank()) {
+                Log.d(TAG, "ASR silence timeout — auto-finalizing")
+                finalizeFromPartial()
+            }
+        }
+        handler.postDelayed(asrSilenceRunnable!!, 5000)
+    }
+
+    private fun finalizeFromPartial() {
+        cancelAsrTimers()
+        if (asrFinalized) return
+        asrFinalized = true
+        val text = latestPartialText.trim()
+        if (text.isEmpty()) return
+
+        asrProvider.stopListening()
+        Log.d(TAG, "User said (auto-final): $text")
+        callback?.onUserAsrFinal(text)
+        currentSession?.userResponses?.add(UserResponse(text))
+
+        conversationProvider.getResponse(
+            text,
+            currentPart,
+            currentSession?.topic,
+            currentSession?.userResponses?.map { it.text } ?: emptyList(),
+        ) { response ->
+            handleExaminerResponse(response)
+            if (isFullMock) advanceFullMock()
+        }
+    }
+
+    private fun cancelAsrTimers() {
+        asrSilenceRunnable?.let { handler.removeCallbacks(it) }
+        asrSilenceRunnable = null
+        asrMaxTimeoutRunnable?.let { handler.removeCallbacks(it) }
+        asrMaxTimeoutRunnable = null
     }
 
     fun onAsrPartial(text: String) {
@@ -248,16 +304,34 @@ class IELTSConversationEngine(
         isRunning = true
         asrBuffer.clear()
 
-        // Start ASR listening
-        asrProvider.startListening(asrCallback)
+        // Don't start ASR here — it will be started after TTS completes
 
         callback?.onSessionStarted(part)
         Log.d(TAG, "Session started: $part")
     }
 
+    fun startAsrListening() {
+        if (!isRunning) return
+        cancelAsrTimers()
+        latestPartialText = ""
+        asrFinalized = false
+        asrProvider.stopListening()
+        asrProvider.startListening(asrCallback)
+
+        // Max timeout: auto-finalize after 15s no matter what
+        asrMaxTimeoutRunnable = Runnable {
+            if (!asrFinalized && latestPartialText.isNotBlank()) {
+                Log.d(TAG, "ASR max timeout — auto-finalizing")
+                finalizeFromPartial()
+            }
+        }
+        handler.postDelayed(asrMaxTimeoutRunnable!!, 15000)
+    }
+
     fun stopSession() {
         prepRunnable?.let { handler.removeCallbacks(it) }
         monologueRunnable?.let { handler.removeCallbacks(it) }
+        cancelAsrTimers()
         prepRunnable = null
         monologueRunnable = null
 

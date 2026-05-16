@@ -8,94 +8,229 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import java.io.File
-import java.io.FileInputStream
-import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Locale
 
-class AndroidTTSProvider(private val context: Context) : TTSProvider {
+class AndroidTTSProvider(
+    private val context: Context,
+    private val playAudio: Boolean = true,
+) : TTSProvider {
 
     private var tts: TextToSpeech? = null
     private var callback: TTSProvider.TTSCallback? = null
-    private var audioTrack: AudioTrack? = null
     private val uiHandler = Handler(Looper.getMainLooper())
+    @Volatile
     private var isSpeaking = false
-
-    private val targetSampleRate = 16000
+    private var playbackThread: Thread? = null
+    private var currentAudioTrack: AudioTrack? = null
 
     override fun init(callback: TTSProvider.TTSCallback) {
         this.callback = callback
         tts = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.US
-                Log.d(TAG, "TTS initialized")
+
+                // Try to find a male English voice to match the male avatar
+                val maleVoice = tts?.voices?.firstOrNull {
+                    it.locale.language == "en" &&
+                        (it.name.contains("male", ignoreCase = true) &&
+                            !it.name.contains("female", ignoreCase = true))
+                }
+                if (maleVoice != null) {
+                    tts?.voice = maleVoice
+                    Log.d(TAG, "Set male voice: ${maleVoice.name}")
+                } else {
+                    // Fallback: list available voices for debugging
+                    tts?.voices?.filter { it.locale.language == "en" }?.forEach {
+                        Log.d(TAG, "Available voice: ${it.name} ${it.locale} features=${it.features}")
+                    }
+                    Log.d(TAG, "No male voice found, using default")
+                }
+
+                Log.d(TAG, "TTS engine initialized")
             } else {
+                Log.e(TAG, "TTS engine init failed: $status")
                 uiHandler.post { callback.onError("TTS init failed") }
             }
         }
+
+        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                Log.d(TAG, "TTS synthesis started")
+            }
+
+            override fun onDone(utteranceId: String?) {
+                Log.d(TAG, "TTS synthesis done, feeding PCM")
+                feedPcmFromWav()
+            }
+
+            override fun onError(utteranceId: String?) {
+                Log.e(TAG, "TTS synthesis error")
+                isSpeaking = false
+                uiHandler.post { callback.onError("TTS synthesis error") }
+            }
+        })
     }
 
     override fun speak(text: String) {
         if (isSpeaking) stop()
         isSpeaking = true
+        Log.d(TAG, "speak() called, synthesizing to file")
 
-        val wavFile = File(context.cacheDir, "tts_output_${System.currentTimeMillis()}.wav")
+        val wavFile = File(context.cacheDir, "tts_output.wav")
+        wavFile.delete()
+
         val utteranceId = "tts_${System.currentTimeMillis()}"
-
         val result = tts?.synthesizeToFile(text, Bundle(), wavFile, utteranceId)
         if (result == TextToSpeech.ERROR) {
             isSpeaking = false
-            callback?.onError("synthesizeToFile failed")
-            return
+            callback?.onError("TTS synthesis failed")
         }
+    }
 
-        Thread {
-            var attempts = 0
-            while (!wavFile.exists() && attempts < 100) {
-                Thread.sleep(50)
-                attempts++
-            }
-            if (!wavFile.exists()) {
-                isSpeaking = false
-                uiHandler.post { callback?.onError("TTS file not generated") }
-                return@Thread
-            }
+    private fun feedPcmFromWav() {
+        uiHandler.post { callback?.onSpeakStart() }
 
-            Thread.sleep(100)
-
+        playbackThread = Thread {
             try {
-                val wavData = WavData.parse(wavFile)
-                if (wavData.pcm.isEmpty()) {
+                val wavFile = File(context.cacheDir, "tts_output.wav")
+                if (!wavFile.exists()) {
                     isSpeaking = false
-                    uiHandler.post { callback?.onError("TTS produced empty audio") }
+                    uiHandler.post { callback?.onError("TTS file not found") }
                     return@Thread
                 }
 
-                val resampledPcm = resampleTo16k(wavData.pcm, wavData.sampleRate)
+                val wavData = wavFile.readBytes()
+                if (wavData.size < 44) {
+                    isSpeaking = false
+                    uiHandler.post { callback?.onError("TTS file too small") }
+                    return@Thread
+                }
 
-                uiHandler.post { callback?.onSpeakStart() }
-                callback?.onPCMData(resampledPcm)
-                playPCM(resampledPcm)
+                val sampleRate = ByteBuffer.wrap(wavData, 24, 4).order(ByteOrder.LITTLE_ENDIAN).int
+                val bitsPerSample = ByteBuffer.wrap(wavData, 34, 2).order(ByteOrder.LITTLE_ENDIAN).short.toInt()
+                val channels = ByteBuffer.wrap(wavData, 22, 2).order(ByteOrder.LITTLE_ENDIAN).short.toInt()
 
-                isSpeaking = false
-                uiHandler.post { callback?.onSpeakComplete() }
-            } catch (e: Exception) {
-                Log.e(TAG, "Audio processing error", e)
-                isSpeaking = false
-                uiHandler.post { callback?.onError(e.message ?: "Audio error") }
-            } finally {
+                Log.d(TAG, "WAV: ${sampleRate}Hz, ${bitsPerSample}bit, ${channels}ch")
+
+                var dataOffset = 12
+                while (dataOffset < wavData.size - 8) {
+                    val chunkId = String(wavData, dataOffset, 4)
+                    val chunkSize = ByteBuffer.wrap(wavData, dataOffset + 4, 4).order(ByteOrder.LITTLE_ENDIAN).int
+                    if (chunkId == "data") {
+                        dataOffset += 8
+                        break
+                    }
+                    dataOffset += 8 + chunkSize
+                }
+
+                val pcmData = wavData.copyOfRange(dataOffset, wavData.size)
                 wavFile.delete()
+
+                // Resample to 16kHz mono for DH SDK
+                val mono = if (channels >= 2) toMono(pcmData, bitsPerSample) else pcmData
+                val resampled = if (sampleRate != 16000) resample(mono, sampleRate, 16000, bitsPerSample) else mono
+
+                val bytesPerSec = 16000 * 2 // 16kHz, 16bit, mono
+                val chunkSize = bytesPerSec * 40 / 1000 // 40ms chunks
+
+                if (playAudio) {
+                    // Voice-only mode: play through AudioTrack ourselves
+                    val bufSize = AudioTrack.getMinBufferSize(16000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+                    val track = AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .build()
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setSampleRate(16000)
+                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                .build()
+                        )
+                        .setBufferSizeInBytes(bufSize)
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .build()
+                    currentAudioTrack = track
+                    track.play()
+
+                    var offset = 0
+                    while (offset < resampled.size && isSpeaking) {
+                        val end = minOf(offset + chunkSize, resampled.size)
+                        val chunk = resampled.copyOfRange(offset, end)
+                        track.write(chunk, 0, chunk.size)
+                        offset = end
+                        Thread.sleep(40)
+                    }
+
+                    track.stop()
+                    track.release()
+                    currentAudioTrack = null
+                } else {
+                    // DH mode: just feed PCM, DH SDK handles audio playback
+                    var offset = 0
+                    while (offset < resampled.size && isSpeaking) {
+                        val end = minOf(offset + chunkSize, resampled.size)
+                        val chunk = resampled.copyOfRange(offset, end)
+                        uiHandler.post { callback?.onPCMData(chunk) }
+                        offset = end
+                        Thread.sleep(40)
+                    }
+                }
+
+                if (isSpeaking) {
+                    isSpeaking = false
+                    uiHandler.post { callback?.onSpeakComplete() }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "PCM feed error", e)
+                isSpeaking = false
+                currentAudioTrack = null
+                uiHandler.post { callback?.onSpeakComplete() }
             }
-        }.start()
+        }.also { it.start() }
+    }
+
+    private fun toMono(stereoData: ByteArray, bitsPerSample: Int): ByteArray {
+        if (bitsPerSample != 16) return stereoData
+        val monoSamples = stereoData.size / 4
+        val mono = ByteArray(monoSamples * 2)
+        for (i in 0 until monoSamples) {
+            mono[i * 2] = stereoData[i * 4]
+            mono[i * 2 + 1] = stereoData[i * 4 + 1]
+        }
+        return mono
+    }
+
+    private fun resample(data: ByteArray, fromRate: Int, toRate: Int, bitsPerSample: Int): ByteArray {
+        if (fromRate == toRate || bitsPerSample != 16) return data
+        val samplesIn = data.size / 2
+        val samplesOut = (samplesIn.toLong() * toRate / fromRate).toInt()
+        val out = ByteArray(samplesOut * 2)
+        val ratio = samplesIn.toDouble() / samplesOut
+        for (i in 0 until samplesOut) {
+            val srcIdx = minOf((i * ratio).toInt(), samplesIn - 1)
+            out[i * 2] = data[srcIdx * 2]
+            out[i * 2 + 1] = data[srcIdx * 2 + 1]
+        }
+        return out
     }
 
     override fun stop() {
         isSpeaking = false
+        try {
+            currentAudioTrack?.stop()
+            currentAudioTrack?.release()
+        } catch (_: Exception) {}
+        currentAudioTrack = null
         tts?.stop()
-        stopAudioTrack()
     }
 
     override fun release() {
@@ -103,119 +238,6 @@ class AndroidTTSProvider(private val context: Context) : TTSProvider {
         tts?.shutdown()
         tts = null
         callback = null
-    }
-
-    // Properly parse WAV — finds "data" chunk instead of assuming 44-byte header
-    private data class WavData(val sampleRate: Int, val pcm: ByteArray) {
-        companion object {
-            fun parse(file: File): WavData {
-                val bytes = file.readBytes()
-                val bb = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-
-                // Read sample rate from fmt chunk (offset 24 in standard WAV)
-                val sampleRate = bb.getInt(24)
-
-                // Find "data" chunk — search for the marker instead of assuming offset 36
-                var dataOffset = 12 // skip RIFF header
-                while (dataOffset < bytes.size - 8) {
-                    val chunkId = String(bytes, dataOffset, 4)
-                    val chunkSize = ByteBuffer.wrap(bytes, dataOffset + 4, 4)
-                        .order(ByteOrder.LITTLE_ENDIAN).int
-                    if (chunkId == "data") {
-                        val pcmStart = dataOffset + 8
-                        val pcmEnd = (pcmStart + chunkSize).coerceAtMost(bytes.size)
-                        return WavData(sampleRate, bytes.copyOfRange(pcmStart, pcmEnd))
-                    }
-                    dataOffset += 8 + chunkSize
-                    // Chunks must be word-aligned
-                    if (chunkSize % 2 != 0) dataOffset++
-                }
-
-                // Fallback: assume standard 44-byte header
-                return WavData(sampleRate, if (bytes.size > 44) bytes.copyOfRange(44, bytes.size) else ByteArray(0))
-            }
-        }
-    }
-
-    private fun resampleTo16k(pcm: ByteArray, sourceRate: Int): ByteArray {
-        if (sourceRate <= 0 || sourceRate > 96000) return pcm
-        if (sourceRate == targetSampleRate) return pcm
-
-        val ratio = sourceRate.toDouble() / targetSampleRate
-        val sourceSamples = pcm.size / 2
-        if (sourceSamples == 0) return pcm
-        val targetSamples = (sourceSamples / ratio).toInt().coerceAtLeast(1)
-        val result = ByteArray(targetSamples * 2)
-        val bb = ByteBuffer.wrap(result).order(ByteOrder.LITTLE_ENDIAN)
-        val srcBB = ByteBuffer.wrap(pcm).order(ByteOrder.LITTLE_ENDIAN)
-
-        for (i in 0 until targetSamples) {
-            val srcIdx = (i * ratio).toInt()
-            if (srcIdx * 2 + 1 < pcm.size) {
-                bb.putShort(srcBB.getShort(srcIdx * 2))
-            } else {
-                bb.putShort(0)
-            }
-        }
-        return result
-    }
-
-    private fun playPCM(pcmData: ByteArray) {
-        stopAudioTrack()
-
-        val bufSize = pcmData.size.coerceAtLeast(
-            AudioTrack.getMinBufferSize(
-                targetSampleRate,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-            )
-        )
-
-        audioTrack = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setSampleRate(targetSampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(bufSize)
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
-
-        audioTrack?.play()
-
-        val chunkSize = 3200
-        var offset = 0
-        while (offset < pcmData.size && isSpeaking) {
-            val end = (offset + chunkSize).coerceAtMost(pcmData.size)
-            audioTrack?.write(pcmData, offset, end - offset)
-            offset = end
-        }
-
-        while (audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING && isSpeaking) {
-            try {
-                Thread.sleep(50)
-            } catch (_: InterruptedException) {
-                break
-            }
-        }
-        stopAudioTrack()
-    }
-
-    private fun stopAudioTrack() {
-        try {
-            audioTrack?.stop()
-            audioTrack?.release()
-        } catch (_: Exception) {
-        }
-        audioTrack = null
     }
 
     companion object {

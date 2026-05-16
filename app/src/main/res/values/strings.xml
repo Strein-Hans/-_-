@@ -44,7 +44,8 @@
 
     <!-- Model Download -->
     <string name="model_download_title">Download Digital Human Model</string>
-    <string name="model_download_preparing">Preparing download…</string>
+    <string name="model_download_preparing">Downloading base resources…</string>
+    <string name="model_download_avatar">Downloading avatar model…</string>
     <string name="model_download_complete">Download complete!</string>
     <string name="model_download_failed">Download failed: %s</string>
     <string name="retry">Retry</string>

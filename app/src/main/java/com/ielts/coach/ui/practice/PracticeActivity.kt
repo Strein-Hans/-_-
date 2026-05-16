@@ -74,7 +74,9 @@ class PracticeActivity : BaseActivity() {
         ) {
             initEngines()
             setupUI()
-            connectAndStart()
+            if (voiceOnlyMode) {
+                connectAndStart()
+            }
         } else {
             ActivityCompat.requestPermissions(
                 this,
@@ -94,7 +96,9 @@ class PracticeActivity : BaseActivity() {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 initEngines()
                 setupUI()
-                connectAndStart()
+                if (voiceOnlyMode) {
+                    connectAndStart()
+                }
             } else {
                 Toast.makeText(this, "需要麦克风权限才能使用口语练习功能", Toast.LENGTH_LONG).show()
                 finish()
@@ -134,6 +138,10 @@ class PracticeActivity : BaseActivity() {
                     override fun onReady() {
                         Log.d(TAG, "Digital human ready")
                         dh.triggerRandomMotion()
+                        // Start conversation only after DH is ready
+                        if (conversationEngine != null) {
+                            connectAndStart()
+                        }
                     }
 
                     override fun onError(error: String) {
@@ -158,7 +166,7 @@ class PracticeActivity : BaseActivity() {
         asrProvider = asr
 
         // TTS Provider — Android TTS
-        val tts = AndroidTTSProvider(this)
+        val tts = AndroidTTSProvider(this, playAudio = voiceOnlyMode)
         ttsProvider = tts
         tts.init(object : TTSProvider.TTSCallback {
             override fun onPCMData(pcmData: ByteArray) {
@@ -170,11 +178,12 @@ class PracticeActivity : BaseActivity() {
             }
 
             override fun onSpeakComplete() {
-                Log.d(TAG, "TTS complete")
+                Log.e(TAG, "TTS complete — starting ASR")
                 if (!voiceOnlyMode) {
                     dh.stopPush()
                     dh.triggerRandomMotion()
                 }
+                conversationEngine?.startAsrListening()
             }
 
             override fun onError(error: String) {
@@ -285,14 +294,19 @@ class PracticeActivity : BaseActivity() {
     }
 
     private fun connectAndStart() {
-        val engine = conversationEngine ?: return
+        val engine = conversationEngine ?: run {
+            Log.e(TAG, "ENGINE IS NULL - cannot start")
+            return
+        }
 
         // Check ASR credentials before starting
         if (asrProvider != null && !asrProvider!!.isAvailable()) {
+            Log.e(TAG, "ASR not available")
             showError(getString(R.string.asr_not_configured))
             return
         }
 
+        Log.e(TAG, "connectAndStart: part=$currentPart, fullMock=$isFullMock, asrReady=${asrProvider?.isAvailable()}")
         if (isFullMock) {
             val topic = currentTopic ?: TopicRepository(this).loadTopics().randomOrNull() ?: return
             engine.startFullMock(topic)

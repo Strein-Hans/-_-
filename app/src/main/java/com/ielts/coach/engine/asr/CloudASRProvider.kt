@@ -9,11 +9,7 @@ import android.os.Looper
 import android.util.Base64
 import android.util.Log
 import okhttp3.*
-import okio.ByteString
-import okio.ByteString.Companion.toByteString
-import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.ByteBuffer
@@ -33,12 +29,14 @@ class CloudASRProvider(
 
     private var callback: ASRProvider.ASRCallback? = null
     private var audioRecord: AudioRecord? = null
+    @Volatile
     private var isListening = false
     private var webSocket: WebSocket? = null
     private val uiHandler = Handler(Looper.getMainLooper())
+    private val lock = Object()
 
     private val client = OkHttpClient.Builder()
-        .readTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
         .build()
 
@@ -51,6 +49,10 @@ class CloudASRProvider(
             return
         }
 
+        // Ensure previous connection is fully cleaned up
+        forceStop()
+        Thread.sleep(100)
+
         connectWebSocket()
     }
 
@@ -58,12 +60,23 @@ class CloudASRProvider(
         isListening = false
         stopAudioCapture()
         sendEndFrame()
-        webSocket?.close(1000, "stop")
+        try {
+            webSocket?.close(1000, "stop")
+        } catch (_: Exception) {}
+        webSocket = null
+    }
+
+    private fun forceStop() {
+        isListening = false
+        stopAudioCapture()
+        try {
+            webSocket?.close(1000, "force_stop")
+        } catch (_: Exception) {}
         webSocket = null
     }
 
     override fun release() {
-        stopListening()
+        forceStop()
         callback = null
         client.dispatcher.executorService.shutdown()
     }
@@ -76,7 +89,7 @@ class CloudASRProvider(
 
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                Log.d(TAG, "WebSocket connected")
+                Log.e(TAG, "WebSocket connected")
                 sendStartFrame()
                 startAudioCapture()
             }
@@ -87,15 +100,15 @@ class CloudASRProvider(
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.e(TAG, "WebSocket failure: ${t.message}")
+                isListening = false
+                stopAudioCapture()
                 uiHandler.post {
-                    isListening = false
-                    stopAudioCapture()
                     callback?.onError(t.message ?: "ASR connection failed")
                 }
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                Log.d(TAG, "WebSocket closed: $code $reason")
+                Log.e(TAG, "WebSocket closed: $code $reason")
             }
         })
     }
@@ -134,8 +147,7 @@ class CloudASRProvider(
             put("business", JSONObject().apply {
                 put("language", "en_us")
                 put("domain", "iat")
-                put("accent", "mandarin")
-                put("vad_eos", 2000)
+                put("vad_eos", 10000)
                 put("dwa", "wpgs")
             })
             put("data", JSONObject().apply {
@@ -149,66 +161,75 @@ class CloudASRProvider(
     }
 
     private fun sendEndFrame() {
-        val json = JSONObject().apply {
-            put("data", JSONObject().apply {
-                put("status", STATUS_LAST)
-                put("format", "audio/L16;rate=16000")
-                put("encoding", "raw")
-                put("audio", "")
-            })
-        }
-        webSocket?.send(json.toString())
+        try {
+            val json = JSONObject().apply {
+                put("data", JSONObject().apply {
+                    put("status", STATUS_LAST)
+                    put("format", "audio/L16;rate=16000")
+                    put("encoding", "raw")
+                    put("audio", "")
+                })
+            }
+            webSocket?.send(json.toString())
+        } catch (_: Exception) {}
     }
 
     private fun sendAudioData(audioData: ByteArray, status: Int) {
-        val base64 = Base64.encodeToString(audioData, Base64.NO_WRAP)
-        val json = JSONObject().apply {
-            put("data", JSONObject().apply {
-                put("status", status)
-                put("format", "audio/L16;rate=16000")
-                put("encoding", "raw")
-                put("audio", base64)
-            })
-        }
-        webSocket?.send(json.toString())
+        try {
+            val base64 = Base64.encodeToString(audioData, Base64.NO_WRAP)
+            val json = JSONObject().apply {
+                put("data", JSONObject().apply {
+                    put("status", status)
+                    put("format", "audio/L16;rate=16000")
+                    put("encoding", "raw")
+                    put("audio", base64)
+                })
+            }
+            webSocket?.send(json.toString())
+        } catch (_: Exception) {}
     }
 
     @SuppressLint("MissingPermission")
     private fun startAudioCapture() {
-        val bufferSize = AudioRecord.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-        )
+        synchronized(lock) {
+            val bufferSize = AudioRecord.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+            )
 
-        audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            bufferSize,
-        )
+            val record = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                bufferSize,
+            )
 
-        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-            uiHandler.post { callback?.onError("AudioRecord init failed") }
-            return
+            if (record.state != AudioRecord.STATE_INITIALIZED) {
+                uiHandler.post { callback?.onError("AudioRecord init failed") }
+                return
+            }
+
+            audioRecord = record
+            isListening = true
+            record.startRecording()
         }
 
-        isListening = true
-        audioRecord?.startRecording()
-
         Thread {
-            val buffer = ShortArray(bufferSize / 2)
+            val buffer = ShortArray(1600) // 100ms chunks
             while (isListening) {
-                val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
-                if (read > 0) {
-                    val bytes = ShortArray(read).let {
-                        System.arraycopy(buffer, 0, it, 0, read)
-                        val bb = ByteBuffer.allocate(it.size * 2)
-                        bb.order(ByteOrder.LITTLE_ENDIAN)
-                        for (s in it) bb.putShort(s)
-                        bb.array()
-                    }
+                val record = audioRecord ?: break
+                val read: Int = try {
+                    record.read(buffer, 0, buffer.size)
+                } catch (e: Exception) {
+                    Log.e(TAG, "AudioRecord read error: ${e.message}")
+                    break
+                }
+                if (read > 0 && isListening) {
+                    val bytes = ByteBuffer.allocate(read * 2).order(ByteOrder.LITTLE_ENDIAN).also { bb ->
+                        for (i in 0 until read) bb.putShort(buffer[i])
+                    }.array()
                     sendAudioData(bytes, STATUS_CONTINUE)
                 }
             }
@@ -216,12 +237,15 @@ class CloudASRProvider(
     }
 
     private fun stopAudioCapture() {
-        try {
-            audioRecord?.stop()
-            audioRecord?.release()
-        } catch (_: Exception) {
+        synchronized(lock) {
+            try {
+                audioRecord?.stop()
+            } catch (_: Exception) {}
+            try {
+                audioRecord?.release()
+            } catch (_: Exception) {}
+            audioRecord = null
         }
-        audioRecord = null
     }
 
     private fun handleResult(text: String) {
