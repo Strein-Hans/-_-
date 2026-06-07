@@ -16,8 +16,8 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.ConcurrentHashMap
 
 class ServerTTSProvider(
     private val baseUrl: String,
@@ -36,8 +36,43 @@ class ServerTTSProvider(
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
+    // PCM cache for repeated phrases
+    private val pcmCache = ConcurrentHashMap<String, ByteArray>()
+
+    // Preload common phrases in background after init
+    private val commonPhrases = listOf(
+        "Good morning! Nice to meet you. My name is Sarah, and I'll be your examiner today.",
+        "Good afternoon! Nice to meet you. My name is Sarah, and I'll be your examiner today.",
+        "Hello! Welcome to the IELTS Speaking test. My name is Sarah.",
+        "Thank you. And what should I call you?",
+        "That's interesting. Can you tell me more about that?",
+        "I see. Why do you think that is?",
+        "Could you tell me a bit more about that?",
+        "I'm sorry, could you please repeat that?",
+    )
+
     override fun init(callback: TTSProvider.TTSCallback) {
         this.callback = callback
+        preloadCommonPhrases()
+    }
+
+    private fun preloadCommonPhrases() {
+        CoroutineScope(Dispatchers.IO).launch {
+            for (phrase in commonPhrases) {
+                if (pcmCache.containsKey(phrase)) continue
+                try {
+                    val mp3Data = fetchTTS(phrase)
+                    if (mp3Data.isNotEmpty()) {
+                        val pcmData = decodeMp3ToPcm(mp3Data)
+                        if (pcmData.isNotEmpty()) {
+                            pcmCache[phrase] = pcmData
+                            Log.d(TAG, "Cached: ${phrase.take(40)}...")
+                        }
+                    }
+                } catch (_: Exception) { }
+            }
+            Log.d(TAG, "Preload complete, cached ${pcmCache.size} phrases")
+        }
     }
 
     override fun speak(text: String) {
@@ -46,28 +81,17 @@ class ServerTTSProvider(
 
         uiHandler.post { callback?.onSpeakStart() }
 
+        // Check cache first
+        val cached = pcmCache[text]
+        if (cached != null) {
+            Log.d(TAG, "TTS cache hit: ${text.take(40)}...")
+            feedPcmChunks(cached)
+            return
+        }
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val body = JSONObject().apply {
-                    put("text", text)
-                    put("accent", accent)
-                }.toString().toRequestBody(jsonMediaType)
-
-                val request = Request.Builder()
-                    .url("$baseUrl/tts")
-                    .post(body)
-                    .build()
-
-                val response = client.newCall(request).execute()
-                if (!response.isSuccessful) {
-                    withContext(Dispatchers.Main) {
-                        isSpeaking = false
-                        callback?.onError("TTS server error: ${response.code}")
-                    }
-                    return@launch
-                }
-
-                val mp3Data = response.body?.bytes() ?: byteArrayOf()
+                val mp3Data = fetchTTS(text)
                 Log.d(TAG, "TTS received ${mp3Data.size} bytes MP3")
 
                 if (!isSpeaking) return@launch
@@ -81,27 +105,50 @@ class ServerTTSProvider(
                     return@launch
                 }
 
-                // Feed PCM in ~40ms chunks (1280 bytes at 16kHz 16bit mono)
-                val chunkSize = 1280
-                var offset = 0
-                while (offset < pcmData.size && isSpeaking) {
-                    val end = minOf(offset + chunkSize, pcmData.size)
-                    val chunk = pcmData.copyOfRange(offset, end)
-                    uiHandler.post { callback?.onPCMData(chunk) }
-                    offset = end
-                    Thread.sleep(40)
-                }
+                // Cache for future use
+                pcmCache[text] = pcmData
 
-                if (isSpeaking) {
-                    isSpeaking = false
-                    uiHandler.post { callback?.onSpeakComplete() }
-                }
+                feedPcmChunks(pcmData)
             } catch (e: Exception) {
                 Log.e(TAG, "Server TTS error", e)
                 isSpeaking = false
                 uiHandler.post { callback?.onError("TTS failed: ${e.message}") }
             }
         }
+    }
+
+    private fun feedPcmChunks(pcmData: ByteArray) {
+        val chunkSize = 1280
+        var offset = 0
+        while (offset < pcmData.size && isSpeaking) {
+            val end = minOf(offset + chunkSize, pcmData.size)
+            val chunk = pcmData.copyOfRange(offset, end)
+            uiHandler.post { callback?.onPCMData(chunk) }
+            offset = end
+            Thread.sleep(40)
+        }
+        if (isSpeaking) {
+            isSpeaking = false
+            uiHandler.post { callback?.onSpeakComplete() }
+        }
+    }
+
+    private fun fetchTTS(text: String): ByteArray {
+        val body = JSONObject().apply {
+            put("text", text)
+            put("accent", accent)
+        }.toString().toRequestBody(jsonMediaType)
+
+        val request = Request.Builder()
+            .url("$baseUrl/tts")
+            .post(body)
+            .build()
+
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            throw Exception("TTS server error: ${response.code}")
+        }
+        return response.body?.bytes() ?: byteArrayOf()
     }
 
     override fun stop() {
@@ -112,6 +159,7 @@ class ServerTTSProvider(
         stop()
         callback = null
         client.dispatcher.executorService.shutdown()
+        pcmCache.clear()
     }
 
     private fun decodeMp3ToPcm(mp3Data: ByteArray): ByteArray {

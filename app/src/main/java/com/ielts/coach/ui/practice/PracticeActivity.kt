@@ -165,7 +165,11 @@ class PracticeActivity : BaseActivity() {
         Log.d(TAG, "Conversation mode: $mode")
         val backendUrl = prefs.getString(KEY_BACKEND_URL, "http://8.136.188.53:8001") ?: "http://8.136.188.53:8001"
         val accent = prefs.getString(KEY_ACCENT, "british") ?: "british"
-        val tts: TTSProvider = AndroidTTSProvider(this, playAudio = voiceOnlyMode)
+        val tts: TTSProvider = if (mode == MODE_BACKEND) {
+            ServerTTSProvider(backendUrl, accent)
+        } else {
+            AndroidTTSProvider(this, playAudio = voiceOnlyMode)
+        }
         ttsProvider = tts
         tts.init(object : TTSProvider.TTSCallback {
             override fun onPCMData(pcmData: ByteArray) {
