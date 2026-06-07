@@ -234,6 +234,10 @@ class PracticeActivity : BaseActivity() {
                 Log.d(TAG, "Examiner: $text")
             }
 
+            override fun onEmotionDetected(emotion: String, confidence: Float) {
+                runOnUiThread { showEmotion(emotion, confidence) }
+            }
+
             override fun onPreparationTick(remainingSeconds: Int) {
                 runOnUiThread { updateTimer(remainingSeconds) }
             }
@@ -375,6 +379,22 @@ class PracticeActivity : BaseActivity() {
     private fun showError(msg: String) {
         binding.tvError.text = msg
         binding.tvError.visibility = View.VISIBLE
+    }
+
+    private fun showEmotion(emotion: String, confidence: Float) {
+        val (emoji, color) = when (emotion) {
+            "confident" -> "💪 自信" to "#4CAF50"
+            "nervous" -> "😰 紧张" to "#FF9800"
+            "enthusiastic" -> "🔥 热情" to "#F44336"
+            "hesitant" -> "🤔 迟疑" to "#FFC107"
+            "frustrated" -> "😤 挫败" to "#E91E63"
+            "calm" -> "😊 平静" to "#2196F3"
+            else -> "😐 中性" to "#9E9E9E"
+        }
+        val pct = (confidence * 100).toInt()
+        binding.tvEmotion.text = "$emoji $pct%"
+        binding.tvEmotion.setTextColor(android.graphics.Color.parseColor(color))
+        binding.tvEmotion.visibility = View.VISIBLE
     }
 
     private fun showScoringLoading() {

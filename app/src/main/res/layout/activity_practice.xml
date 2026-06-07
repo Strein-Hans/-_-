@@ -39,6 +39,14 @@
             android:textColor="#FFD54F"
             android:textSize="18sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvEmotion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- Topic Card (visible only in Part 2 preparation) -->

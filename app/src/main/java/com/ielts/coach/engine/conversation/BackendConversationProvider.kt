@@ -14,7 +14,7 @@ class BackendConversationProvider : ConversationProvider {
         part: IELTSPart,
         topic: IELTSTopic?,
         history: List<String>,
-        callback: (String) -> Unit,
+        callback: (ConversationResult) -> Unit,
     ) {
         val body = JSONObject().apply {
             put("userText", userText)
@@ -42,11 +42,13 @@ class BackendConversationProvider : ConversationProvider {
         BackendApiClient.post("/conversation", body) { result ->
             result.onSuccess { json ->
                 val reply = json.optString("response", "Could you say more about that?")
-                Log.d(TAG, "Backend replied: ${reply.take(80)}")
-                callback(reply)
+                val emotion = json.optString("emotion", "neutral")
+                val confidence = json.optDouble("emotionConfidence", 0.0).toFloat()
+                Log.d(TAG, "Backend replied: ${reply.take(80)}, emotion=$emotion")
+                callback(ConversationResult(reply, emotion, confidence))
             }.onFailure { e ->
                 Log.e(TAG, "Backend conversation failed", e)
-                callback("I'm sorry, could you please repeat that?")
+                callback(ConversationResult("I'm sorry, could you please repeat that?"))
             }
         }
     }

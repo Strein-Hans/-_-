@@ -17,7 +17,7 @@ class TemplateConversationProvider : ConversationProvider {
         part: IELTSPart,
         topic: IELTSTopic?,
         history: List<String>,
-        callback: (String) -> Unit,
+        callback: (ConversationResult) -> Unit,
     ) {
         val response = when (part) {
             IELTSPart.PART_1 -> generatePart1Response(history.size)
@@ -25,7 +25,7 @@ class TemplateConversationProvider : ConversationProvider {
             IELTSPart.PART_3 -> generatePart3Response(topic, history.size)
         }
 
-        callback(response)
+        callback(ConversationResult(response))
     }
 
     private fun generatePart1Response(turnCount: Int): String {

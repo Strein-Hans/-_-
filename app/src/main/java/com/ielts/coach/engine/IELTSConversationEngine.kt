@@ -6,6 +6,7 @@ import android.util.Log
 import com.ielts.coach.data.model.*
 import com.ielts.coach.engine.asr.ASRProvider
 import com.ielts.coach.engine.conversation.ConversationProvider
+import com.ielts.coach.engine.conversation.ConversationResult
 import com.ielts.coach.engine.dh.DuixMobileManager
 import com.ielts.coach.engine.scoring.ScoringProvider
 import com.ielts.coach.engine.scoring.ScoringRequest
@@ -27,6 +28,7 @@ class IELTSConversationEngine(
         fun onExaminerSpeaking(text: String) {}
         fun onExaminerSpeakStop() {}
         fun onExaminerThinking() {}
+        fun onEmotionDetected(emotion: String, confidence: Float) {}
         fun onPreparationTick(remainingSeconds: Int) {}
         fun onPreparationEnd() {}
         fun onMonologueTick(remainingSeconds: Int) {}
@@ -111,9 +113,9 @@ class IELTSConversationEngine(
         Log.d(TAG, "startPart1: getting first question")
         val seed = buildRandomPart1Seed()
         // Send seed as a system-level topic hint, not as user speech
-        conversationProvider.getResponse("[START] $seed", IELTSPart.PART_1, null, emptyList()) { response ->
-            Log.d(TAG, "Got examiner response: ${response.take(50)}")
-            handleExaminerResponse(response)
+        conversationProvider.getResponse("[START] $seed", IELTSPart.PART_1, null, emptyList()) { result ->
+            Log.d(TAG, "Got examiner response: ${result.text.take(50)}")
+            handleExaminerResponse(result)
         }
     }
 
@@ -198,8 +200,8 @@ class IELTSConversationEngine(
 
     fun startPart3(topic: IELTSTopic) {
         startSession(IELTSPart.PART_3, topic)
-        conversationProvider.getResponse("", IELTSPart.PART_3, topic, emptyList()) { response ->
-            handleExaminerResponse(response)
+        conversationProvider.getResponse("", IELTSPart.PART_3, topic, emptyList()) { result ->
+            handleExaminerResponse(result)
         }
     }
 
@@ -316,8 +318,8 @@ class IELTSConversationEngine(
                 currentPart,
                 currentSession?.topic,
                 buildConversationHistory(),
-            ) { response ->
-                handleExaminerResponse(response)
+            ) { result ->
+                handleExaminerResponse(result)
                 if (isFullMock) advanceFullMock()
             }
         }
@@ -326,10 +328,13 @@ class IELTSConversationEngine(
 
     // ── Examiner speech ───────────────────────────────────────────
 
-    private fun handleExaminerResponse(text: String) {
-        currentSession?.examinerResponses?.add(text)
-        callback?.onExaminerSpeaking(text)
-        speakExaminer(text)
+    private fun handleExaminerResponse(result: ConversationResult) {
+        currentSession?.examinerResponses?.add(result.text)
+        if (result.emotion != "neutral") {
+            callback?.onEmotionDetected(result.emotion, result.emotionConfidence)
+        }
+        callback?.onExaminerSpeaking(result.text)
+        speakExaminer(result.text)
     }
 
     private fun speakExaminer(text: String) {

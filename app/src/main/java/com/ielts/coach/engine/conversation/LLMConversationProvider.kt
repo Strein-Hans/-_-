@@ -34,7 +34,7 @@ class LLMConversationProvider(
         part: IELTSPart,
         topic: IELTSTopic?,
         history: List<String>,
-        callback: (String) -> Unit,
+        callback: (ConversationResult) -> Unit,
     ) {
         Log.d(TAG, "getResponse called: userText=${userText.take(40)}, part=$part")
         CoroutineScope(Dispatchers.IO).launch {
@@ -61,7 +61,7 @@ class LLMConversationProvider(
 
                 if (!response.isSuccessful || body == null) {
                     withContext(Dispatchers.Main) {
-                        callback("I'm sorry, could you please repeat that?")
+                        callback(ConversationResult("I'm sorry, could you please repeat that?"))
                     }
                     return@launch
                 }
@@ -78,12 +78,12 @@ class LLMConversationProvider(
                 Log.d(TAG, "LLM replied: ${examinerReply.take(80)}")
 
                 withContext(Dispatchers.Main) {
-                    callback(examinerReply)
+                    callback(ConversationResult(examinerReply))
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "LLM request failed", e)
                 withContext(Dispatchers.Main) {
-                    callback("I apologize, could you please elaborate on that?")
+                    callback(ConversationResult("I apologize, could you please elaborate on that?"))
                 }
             }
         }
