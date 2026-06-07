@@ -198,11 +198,6 @@ class PracticeActivity : BaseActivity() {
                 BackendApiClient.baseUrl = backendUrl
                 BackendConversationProvider()
             }
-            MODE_LLM -> {
-                val endpoint = prefs.getString(KEY_LLM_ENDPOINT, "https://api.deepseek.com/v1/chat/completions") ?: ""
-                val apiKey = prefs.getString(KEY_LLM_API_KEY, "sk-71b035d3a17e44a9b0a100182ade17a7") ?: ""
-                LLMConversationProvider(endpoint, apiKey)
-            }
             else -> TemplateConversationProvider()
         }
 

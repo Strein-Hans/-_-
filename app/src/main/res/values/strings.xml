@@ -34,8 +34,8 @@
     <string name="mode_template_desc">Pre-set scripts, offline ready</string>
     <string name="mode_llm">AI Examiner (LLM)</string>
     <string name="mode_llm_desc">DeepSeek powered, smart dialogue</string>
-    <string name="mode_backend">Backend Server</string>
-    <string name="mode_backend_desc">Full backend with scoring &amp; topic guidance</string>
+    <string name="mode_backend">AI Examiner</string>
+    <string name="mode_backend_desc">DeepSeek powered, smart dialogue and scoring</string>
     <string name="backend_url_hint">Backend URL (e.g. http://10.0.2.2:8001)</string>
 
     <!-- ASR Config -->

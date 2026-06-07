@@ -70,9 +70,9 @@ class SettingsActivity : BaseActivity() {
         val unselectedStroke = resources.getColor(R.color.mode_unselected_stroke, null)
         val unselectedBg = resources.getColor(R.color.mode_unselected_bg, null)
 
-        val cards = listOf(binding.cardModeTemplate, binding.cardModeLlm, binding.cardModeBackend)
-        val checks = listOf(binding.ivCheckTemplate, binding.ivCheckLlm, binding.ivCheckBackend)
-        val modes = listOf(MODE_TEMPLATE, MODE_LLM, MODE_BACKEND)
+        val cards = listOf(binding.cardModeTemplate, binding.cardModeBackend)
+        val checks = listOf(binding.ivCheckTemplate, binding.ivCheckBackend)
+        val modes = listOf(MODE_TEMPLATE, MODE_BACKEND)
 
         for (i in modes.indices) {
             val isSelected = modes[i] == selectedMode
@@ -87,11 +87,6 @@ class SettingsActivity : BaseActivity() {
     private fun setupListeners() {
         binding.cardModeTemplate.setOnClickListener {
             selectedMode = MODE_TEMPLATE
-            updateModeCards()
-        }
-
-        binding.cardModeLlm.setOnClickListener {
-            selectedMode = MODE_LLM
             updateModeCards()
         }
 

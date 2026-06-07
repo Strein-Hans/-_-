@@ -34,8 +34,8 @@
     <string name="mode_template_desc">预设话术，无需联网</string>
     <string name="mode_llm">AI考官（大模型）</string>
     <string name="mode_llm_desc">DeepSeek 驱动，智能对话</string>
-    <string name="mode_backend">后端服务器</string>
-    <string name="mode_backend_desc">完整后端，含评分与跑题引导</string>
+    <string name="mode_backend">AI考官模式</string>
+    <string name="mode_backend_desc">DeepSeek 驱动，智能对话与评分</string>
     <string name="backend_url_hint">后端地址（如 http://10.0.2.2:8001）</string>
 
     <!-- ASR Config -->
