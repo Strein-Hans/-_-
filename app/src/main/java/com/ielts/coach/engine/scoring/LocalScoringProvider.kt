@@ -39,7 +39,12 @@ class LocalScoringProvider : ScoringProvider {
         val improvements = buildImprovements(score, words, request.userTranscript, request.part)
         val feedback = buildOverallFeedback(score, request.part, words.size)
 
-        return ScoringResult(score, strengths, improvements, feedback)
+        return ScoringResult(
+            score = score,
+            strengths = strengths,
+            improvements = improvements,
+            overallFeedback = feedback,
+        )
     }
 
     // ── FC ─────────────────────────────────────────────────────────

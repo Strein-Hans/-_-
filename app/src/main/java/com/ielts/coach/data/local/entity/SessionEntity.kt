@@ -5,7 +5,9 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.ielts.coach.data.local.converter.Converters
 import com.ielts.coach.data.model.BandScore
+import com.ielts.coach.data.model.Correction
 import com.ielts.coach.data.model.IELTSPart
+import com.ielts.coach.data.model.VocabularySuggestion
 
 @Entity(tableName = "sessions")
 @TypeConverters(Converters::class)
@@ -19,6 +21,8 @@ data class SessionEntity(
     val durationSeconds: Int,
     val strengths: List<String> = emptyList(),
     val improvements: List<String> = emptyList(),
+    val corrections: List<Correction> = emptyList(),
+    val vocabularySuggestions: List<VocabularySuggestion> = emptyList(),
     val overallFeedback: String = "",
     val timestamp: Long = System.currentTimeMillis(),
 )

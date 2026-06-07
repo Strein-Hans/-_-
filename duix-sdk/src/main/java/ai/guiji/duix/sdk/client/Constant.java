@@ -16,7 +16,7 @@ public class Constant {
     public static final String CALLBACK_EVENT_MOTION_END = "motion.end";
 
 
-    public static final String BASE_DOWNLOAD_URL = "https://ghfast.top/https://github.com/GuijiAI/duix.ai/releases/download/v1.0.0/gj_dh_res.zip"; // 基础配置文件包（ghfast国内加速）
-    public static final String AVATAR_MODEL_URL = "https://ghfast.top/https://github.com/duixcom/Duix-Mobile/releases/download/v2.0.1/Lily.zip"; // 数字人形象模型包（女性，ghfast国内加速）
+    public static final String BASE_DOWNLOAD_URL = "https://gh-proxy.com/https://github.com/GuijiAI/duix.ai/releases/download/v1.0.0/gj_dh_res.zip"; // 基础配置文件包（gh-proxy国内加速）
+    public static final String AVATAR_MODEL_URL = "https://gh-proxy.com/https://github.com/duixcom/Duix-Mobile/releases/download/v2.0.1/Lily.zip"; // 数字人形象模型包（女性，gh-proxy国内加速）
 
 }

@@ -36,6 +36,7 @@ class LLMConversationProvider(
         history: List<String>,
         callback: (String) -> Unit,
     ) {
+        Log.d(TAG, "getResponse called: userText=${userText.take(40)}, part=$part")
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val systemPrompt = buildSystemPrompt(part, topic)
@@ -45,7 +46,7 @@ class LLMConversationProvider(
                     put("model", model)
                     put("messages", messages)
                     put("temperature", 0.7)
-                    put("max_tokens", 300)
+                    put("max_tokens", 2048)
                 }.toString().toRequestBody(jsonMediaType)
 
                 val request = Request.Builder()
@@ -65,12 +66,16 @@ class LLMConversationProvider(
                     return@launch
                 }
 
-                val examinerReply = JSONObject(body)
+                val msgObj = JSONObject(body)
                     .optJSONArray("choices")
                     ?.optJSONObject(0)
                     ?.optJSONObject("message")
-                    ?.optString("content", "")
+
+                val examinerReply = msgObj?.optString("content", "")?.trim()
+                    ?.ifBlank { msgObj.optString("reasoning_content", "") }
                     ?: "Could you say more about that?"
+
+                Log.d(TAG, "LLM replied: ${examinerReply.take(80)}")
 
                 withContext(Dispatchers.Main) {
                     callback(examinerReply)
@@ -93,7 +98,8 @@ class LLMConversationProvider(
 
         return when (part) {
             IELTSPart.PART_1 -> base + " You are conducting Part 1: Introduction and Interview. " +
-                    "Ask about familiar topics like hobbies, studies, work, hometown, etc."
+                    "The user message may contain a topic suggestion — USE IT as your starting point. " +
+                    "Never start with the same question twice. Be creative and varied."
 
             IELTSPart.PART_2 -> base + " You are conducting Part 2: Individual Long Turn. " +
                     "The topic is: ${topic?.topic ?: "a memorable experience"}. " +

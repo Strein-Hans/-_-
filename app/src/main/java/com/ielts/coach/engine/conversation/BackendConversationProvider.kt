@@ -42,6 +42,7 @@ class BackendConversationProvider : ConversationProvider {
         BackendApiClient.post("/conversation", body) { result ->
             result.onSuccess { json ->
                 val reply = json.optString("response", "Could you say more about that?")
+                Log.d(TAG, "Backend replied: ${reply.take(80)}")
                 callback(reply)
             }.onFailure { e ->
                 Log.e(TAG, "Backend conversation failed", e)

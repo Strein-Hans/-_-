@@ -26,6 +26,7 @@ class IELTSConversationEngine(
         fun onUserAsrFinal(text: String) {}
         fun onExaminerSpeaking(text: String) {}
         fun onExaminerSpeakStop() {}
+        fun onExaminerThinking() {}
         fun onPreparationTick(remainingSeconds: Int) {}
         fun onPreparationEnd() {}
         fun onMonologueTick(remainingSeconds: Int) {}
@@ -55,6 +56,7 @@ class IELTSConversationEngine(
     private var monologueRunnable: Runnable? = null
     private var asrSilenceRunnable: Runnable? = null
     private var asrMaxTimeoutRunnable: Runnable? = null
+    private var thinkingRunnable: Runnable? = null
 
     // Track examiner responses for transcript
     private val examinerTextBuffer = StringBuilder()
@@ -106,11 +108,39 @@ class IELTSConversationEngine(
 
     fun startPart1() {
         startSession(IELTSPart.PART_1, null)
-        Log.e(TAG, "startPart1: getting first question")
-        conversationProvider.getResponse("", IELTSPart.PART_1, null, emptyList()) { response ->
-            Log.e(TAG, "Got examiner response: ${response.take(50)}")
+        Log.d(TAG, "startPart1: getting first question")
+        val seed = buildRandomPart1Seed()
+        // Send seed as a system-level topic hint, not as user speech
+        conversationProvider.getResponse("[START] $seed", IELTSPart.PART_1, null, emptyList()) { response ->
+            Log.d(TAG, "Got examiner response: ${response.take(50)}")
             handleExaminerResponse(response)
         }
+    }
+
+    private fun buildRandomPart1Seed(): String {
+        val topics = listOf(
+            "Let's talk about music. What kind of music do you enjoy?",
+            "I'd like to ask you about food. What's your favorite type of cuisine?",
+            "Let's discuss your hometown. What do you like most about it?",
+            "I want to talk about travel. Where did you go on your last holiday?",
+            "Let's talk about sports. Do you enjoy playing or watching any sports?",
+            "I'd like to know about your daily routine. What's a typical day like for you?",
+            "Let's discuss technology. How has technology changed the way you learn?",
+            "I want to ask about reading. Do you enjoy reading books or articles?",
+            "Let's talk about weather. What's your favorite season and why?",
+            "I'd like to discuss festivals. How do you celebrate special occasions?",
+            "Let's talk about nature. Do you prefer the mountains or the beach?",
+            "I want to ask about shopping. Do you prefer shopping online or in stores?",
+            "Let's discuss pets. Have you ever had a pet? Tell me about it.",
+            "I'd like to talk about movies. What genre of films do you enjoy?",
+            "Let's discuss transportation. How do you usually get to work or school?",
+            "I want to ask about languages. Besides English, do you speak any other languages?",
+            "Let's talk about hobbies. What do you enjoy doing in your free time?",
+            "I'd like to discuss art. Are you interested in painting, photography, or design?",
+            "Let's talk about social media. How do you use social platforms in your daily life?",
+            "I want to ask about cooking. Can you cook? What's your signature dish?",
+        )
+        return topics.random()
     }
 
     // ── Part 2: Long Turn ─────────────────────────────────────────
@@ -193,15 +223,7 @@ class IELTSConversationEngine(
             callback?.onUserAsrFinal(fullText)
             currentSession?.userResponses?.add(UserResponse(fullText))
 
-            conversationProvider.getResponse(
-                fullText,
-                currentPart,
-                currentSession?.topic,
-                currentSession?.userResponses?.map { it.text } ?: emptyList(),
-            ) { response ->
-                handleExaminerResponse(response)
-                if (isFullMock) advanceFullMock()
-            }
+            scheduleThinkingThenRespond(fullText)
         }
 
         override fun onError(error: String) {
@@ -224,7 +246,24 @@ class IELTSConversationEngine(
                 finalizeFromPartial()
             }
         }
-        handler.postDelayed(asrSilenceRunnable!!, 5000)
+        handler.postDelayed(asrSilenceRunnable!!, 4000)
+    }
+
+    // Build conversation history: [examiner, user, examiner, user, ..., examiner]
+    // Current user text is passed separately, so exclude the last user response.
+    private fun buildConversationHistory(): List<String> {
+        val history = mutableListOf<String>()
+        val examResp = currentSession?.examinerResponses ?: return history
+        val userResp = currentSession?.userResponses ?: return history
+        val userCount = (userResp.size - 1).coerceAtLeast(0)
+
+        for (i in examResp.indices) {
+            history.add(examResp[i])
+            if (i < userCount) {
+                history.add(userResp[i].text)
+            }
+        }
+        return history
     }
 
     private fun finalizeFromPartial() {
@@ -239,15 +278,7 @@ class IELTSConversationEngine(
         callback?.onUserAsrFinal(text)
         currentSession?.userResponses?.add(UserResponse(text))
 
-        conversationProvider.getResponse(
-            text,
-            currentPart,
-            currentSession?.topic,
-            currentSession?.userResponses?.map { it.text } ?: emptyList(),
-        ) { response ->
-            handleExaminerResponse(response)
-            if (isFullMock) advanceFullMock()
-        }
+        scheduleThinkingThenRespond(text)
     }
 
     private fun cancelAsrTimers() {
@@ -270,15 +301,27 @@ class IELTSConversationEngine(
         callback?.onUserAsrFinal(fullText)
         currentSession?.userResponses?.add(UserResponse(fullText))
 
-        conversationProvider.getResponse(
-            fullText,
-            currentPart,
-            currentSession?.topic,
-            currentSession?.userResponses?.map { it.text } ?: emptyList(),
-        ) { response ->
-            handleExaminerResponse(response)
-            if (isFullMock) advanceFullMock()
+        scheduleThinkingThenRespond(fullText)
+    }
+
+    // ── Thinking delay for natural conversation ─────────────────────
+
+    private fun scheduleThinkingThenRespond(userText: String) {
+        callback?.onExaminerThinking()
+        val delay = (200..400).random().toLong()
+        thinkingRunnable = Runnable {
+            thinkingRunnable = null
+            conversationProvider.getResponse(
+                userText,
+                currentPart,
+                currentSession?.topic,
+                buildConversationHistory(),
+            ) { response ->
+                handleExaminerResponse(response)
+                if (isFullMock) advanceFullMock()
+            }
         }
+        handler.postDelayed(thinkingRunnable!!, delay)
     }
 
     // ── Examiner speech ───────────────────────────────────────────
@@ -331,9 +374,11 @@ class IELTSConversationEngine(
     fun stopSession() {
         prepRunnable?.let { handler.removeCallbacks(it) }
         monologueRunnable?.let { handler.removeCallbacks(it) }
+        thinkingRunnable?.let { handler.removeCallbacks(it) }
         cancelAsrTimers()
         prepRunnable = null
         monologueRunnable = null
+        thinkingRunnable = null
 
         currentSession?.let {
             it.status = SessionStatus.COMPLETED
@@ -392,6 +437,8 @@ class IELTSConversationEngine(
                     durationSeconds = durationSeconds,
                     strengths = result.strengths,
                     improvements = result.improvements,
+                    corrections = result.corrections,
+                    vocabularySuggestions = result.vocabularySuggestions,
                     overallFeedback = result.overallFeedback,
                 )
                 callback(report)

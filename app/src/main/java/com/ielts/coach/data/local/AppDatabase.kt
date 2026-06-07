@@ -8,7 +8,7 @@ import com.ielts.coach.data.local.converter.Converters
 import com.ielts.coach.data.local.dao.SessionDao
 import com.ielts.coach.data.local.entity.SessionEntity
 
-@Database(entities = [SessionEntity::class], version = 1, exportSchema = false)
+@Database(entities = [SessionEntity::class], version = 2, exportSchema = false)
 @androidx.room.TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -24,7 +24,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "ielts_coach_db"
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
         }
     }

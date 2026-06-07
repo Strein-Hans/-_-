@@ -2,9 +2,12 @@ package com.ielts.coach.engine.scoring
 
 import android.util.Log
 import com.ielts.coach.data.model.BandScore
+import com.ielts.coach.data.model.Correction
 import com.ielts.coach.data.model.IELTSPart
 import com.ielts.coach.data.model.IELTSTopic
+import com.ielts.coach.data.model.VocabularySuggestion
 import com.ielts.coach.engine.api.BackendApiClient
+import org.json.JSONArray
 import org.json.JSONObject
 
 class BackendScoringProvider : ScoringProvider {
@@ -20,6 +23,8 @@ class BackendScoringProvider : ScoringProvider {
                     put("id", request.topic.id)
                     put("category", request.topic.category)
                     put("topic", request.topic.topic)
+                    put("bulletPoints", JSONArray(request.topic.bulletPoints))
+                    put("followUpQuestions", JSONArray(request.topic.followUpQuestions))
                     put("difficulty", request.topic.difficulty)
                 })
             }
@@ -41,8 +46,30 @@ class BackendScoringProvider : ScoringProvider {
                     val improvements = json.optJSONArray("improvements")?.let { arr ->
                         (0 until arr.length()).map { arr.getString(it) }
                     } ?: emptyList()
+                    val corrections = json.optJSONArray("corrections")?.let { arr ->
+                        (0 until arr.length()).mapNotNull { i ->
+                            arr.optJSONObject(i)?.let { obj ->
+                                Correction(
+                                    original = obj.optString("original", ""),
+                                    corrected = obj.optString("corrected", ""),
+                                    explanation = obj.optString("explanation", ""),
+                                )
+                            }
+                        }
+                    } ?: emptyList()
+                    val vocabSuggestions = json.optJSONArray("vocabularySuggestions")?.let { arr ->
+                        (0 until arr.length()).mapNotNull { i ->
+                            arr.optJSONObject(i)?.let { obj ->
+                                VocabularySuggestion(
+                                    original = obj.optString("original", ""),
+                                    suggested = obj.optString("suggested", ""),
+                                    example = obj.optString("example", ""),
+                                )
+                            }
+                        }
+                    } ?: emptyList()
                     val feedback = json.optString("overallFeedback", "")
-                    callback(ScoringResult(score, strengths, improvements, feedback))
+                    callback(ScoringResult(score, strengths, improvements, corrections, vocabSuggestions, feedback))
                 } catch (e: Exception) {
                     Log.e(TAG, "Parse scoring response failed", e)
                     fallbackLocal(request, callback)

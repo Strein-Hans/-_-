@@ -1,5 +1,17 @@
 package com.ielts.coach.data.model
 
+data class Correction(
+    val original: String,
+    val corrected: String,
+    val explanation: String,
+)
+
+data class VocabularySuggestion(
+    val original: String,
+    val suggested: String,
+    val example: String,
+)
+
 data class ScoringReport(
     val sessionId: String,
     val part: IELTSPart,
@@ -10,6 +22,8 @@ data class ScoringReport(
     val durationSeconds: Int,
     val strengths: List<String> = emptyList(),
     val improvements: List<String> = emptyList(),
+    val corrections: List<Correction> = emptyList(),
+    val vocabularySuggestions: List<VocabularySuggestion> = emptyList(),
     val overallFeedback: String = "",
     val timestamp: Long = System.currentTimeMillis(),
 ) {

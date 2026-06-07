@@ -20,5 +20,7 @@ data class ScoringResult(
     val score: BandScore,
     val strengths: List<String>,
     val improvements: List<String>,
+    val corrections: List<com.ielts.coach.data.model.Correction> = emptyList(),
+    val vocabularySuggestions: List<com.ielts.coach.data.model.VocabularySuggestion> = emptyList(),
     val overallFeedback: String,
 )

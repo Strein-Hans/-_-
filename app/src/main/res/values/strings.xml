@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">IELTS Speaking Coach</string>
+    <string name="app_name">Svatar</string>
     <string name="home_subtitle">Practice with your AI examiner</string>
 
     <!-- Parts -->
@@ -31,9 +31,12 @@
     <!-- Conversation Mode -->
     <string name="conversation_mode">Conversation Mode</string>
     <string name="mode_template">Template Examiner</string>
+    <string name="mode_template_desc">Pre-set scripts, offline ready</string>
     <string name="mode_llm">AI Examiner (LLM)</string>
+    <string name="mode_llm_desc">DeepSeek powered, smart dialogue</string>
     <string name="mode_backend">Backend Server</string>
-    <string name="backend_url_hint">Backend URL (e.g. http://10.0.2.2:8000)</string>
+    <string name="mode_backend_desc">Full backend with scoring &amp; topic guidance</string>
+    <string name="backend_url_hint">Backend URL (e.g. http://10.0.2.2:8001)</string>
 
     <!-- ASR Config -->
     <string name="asr_config">Speech Recognition (iFlytek)</string>
@@ -68,9 +71,12 @@
     <string name="words_per_minute">WPM</string>
     <string name="practice_again">Practice Again</string>
     <string name="exit">Exit</string>
+    <string name="advanced_settings">Advanced Settings</string>
     <string name="scoring_in_progress">AI scoring…</string>
     <string name="strengths">Strengths</string>
     <string name="improvements">Areas to Improve</string>
+    <string name="corrections">Grammar Corrections</string>
+    <string name="vocabulary_suggestions">Vocabulary Upgrades</string>
     <string name="overall_feedback">Feedback</string>
     <string name="examiner_transcript">Examiner</string>
 </resources>

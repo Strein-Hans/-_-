@@ -14,7 +14,6 @@ import java.net.URL
 import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -35,6 +34,9 @@ class CloudASRProvider(
     private val uiHandler = Handler(Looper.getMainLooper())
     private val lock = Object()
 
+    // dwa=wpgs segment accumulation
+    private val segments = mutableListOf<String>()
+
     private val client = OkHttpClient.Builder()
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
@@ -49,10 +51,10 @@ class CloudASRProvider(
             return
         }
 
-        // Ensure previous connection is fully cleaned up
         forceStop()
-        Thread.sleep(100)
+        Thread.sleep(50)
 
+        segments.clear()
         connectWebSocket()
     }
 
@@ -89,7 +91,7 @@ class CloudASRProvider(
 
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                Log.e(TAG, "WebSocket connected")
+                Log.d(TAG, "WebSocket connected")
                 sendStartFrame()
                 startAudioCapture()
             }
@@ -108,7 +110,7 @@ class CloudASRProvider(
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                Log.e(TAG, "WebSocket closed: $code $reason")
+                Log.d(TAG, "WebSocket closed: $code $reason")
             }
         })
     }
@@ -147,7 +149,7 @@ class CloudASRProvider(
             put("business", JSONObject().apply {
                 put("language", "en_us")
                 put("domain", "iat")
-                put("vad_eos", 10000)
+                put("vad_eos", 4000)
                 put("dwa", "wpgs")
             })
             put("data", JSONObject().apply {
@@ -217,7 +219,7 @@ class CloudASRProvider(
         }
 
         Thread {
-            val buffer = ShortArray(1600) // 100ms chunks
+            val buffer = ShortArray(1600)
             while (isListening) {
                 val record = audioRecord ?: break
                 val read: Int = try {
@@ -270,15 +272,36 @@ class CloudASRProvider(
                 }
             }
 
-            val isEnd = result.optInt("ls", 0) == 1
             val recognized = sb.toString()
+            val isEnd = result.optInt("ls", 0) == 1
+            val pgs = result.optString("pgs", "")
 
+            // dwa=wpgs: accumulate segments with apd/rpl semantics
             if (recognized.isNotBlank()) {
-                uiHandler.post {
-                    if (isEnd) {
-                        callback?.onFinalResult(recognized)
-                    } else {
-                        callback?.onPartialResult(recognized)
+                when (pgs) {
+                    "apd" -> segments.add(recognized)
+                    "rpl" -> {
+                        if (segments.isNotEmpty()) segments[segments.lastIndex] = recognized
+                        else segments.add(recognized)
+                    }
+                    else -> {
+                        // No pgs field — treat as a standalone chunk
+                        if (recognized.isNotBlank()) segments.add(recognized)
+                    }
+                }
+            }
+
+            val fullText = segments.joinToString("")
+
+            uiHandler.post {
+                if (isEnd) {
+                    segments.clear()
+                    if (fullText.isNotBlank()) {
+                        callback?.onFinalResult(fullText)
+                    }
+                } else {
+                    if (fullText.isNotBlank()) {
+                        callback?.onPartialResult(fullText)
                     }
                 }
             }

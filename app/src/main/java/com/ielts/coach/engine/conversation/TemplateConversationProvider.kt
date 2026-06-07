@@ -25,28 +25,17 @@ class TemplateConversationProvider : ConversationProvider {
             IELTSPart.PART_3 -> generatePart3Response(topic, history.size)
         }
 
-        // Simulate examiner "thinking" delay
-        val delay = Random.nextLong(800, 1500)
-        uiHandler.postDelayed({
-            callback(response)
-        }, delay)
+        callback(response)
     }
 
     private fun generatePart1Response(turnCount: Int): String {
+        if (turnCount == 0) {
+            return part1Openers.random()
+        }
         return when (turnCount) {
-            0 -> "Hello! Welcome to the IELTS Speaking test. My name is Sarah. Can you tell me your full name, please?"
             1 -> "Thank you. And what should I call you?"
-            2 -> "Nice to meet you. Let's start with some questions about yourself. Do you work or are you a student?"
-            3 -> "What do you enjoy most about your studies or work?"
-            4 -> "That's interesting. Do you like reading? What kind of books do you enjoy?"
-            5 -> "Let's talk about your hometown. What's it like?"
-            6 -> "What do you like most about your hometown?"
-            7 -> "Would you say it's a good place for young people to live?"
-            8 -> "Let's move on to talk about music. What kind of music do you listen to?"
-            9 -> "Do you play any musical instruments?"
-            10 -> "Has your taste in music changed over the years?"
-            11 -> "Thank you. That's the end of Part 1."
-            else -> "Thank you for sharing that. Let me ask you one more thing — what are your plans for the near future?"
+            2 -> "Nice to meet you. Let's start with some questions. ${part1TopicStarters.random()}"
+            else -> part1FollowUps.random()
         }
     }
 
@@ -92,6 +81,37 @@ class TemplateConversationProvider : ConversationProvider {
     }
 
     companion object {
+        private val part1Openers = listOf(
+            "Hello! Welcome to the IELTS Speaking test. My name is Sarah. Can you tell me your full name, please?",
+            "Good afternoon! I'm Sarah, your examiner today. Could you tell me your name?",
+            "Hi there! Welcome to the Speaking test. I'm Sarah. What's your full name?",
+            "Hello! I'm Sarah and I'll be your examiner. May I have your name please?",
+        )
+
+        private val part1TopicStarters = listOf(
+            "Do you work or are you a student?",
+            "Let's talk about music. What kind of music do you enjoy?",
+            "I'd like to ask about your daily routine. What's a typical day like?",
+            "Do you enjoy cooking? What's your favorite dish?",
+            "Let's talk about travel. Where did you go on your last holiday?",
+            "What do you usually do in your free time?",
+            "Do you like sports? What sports are popular where you live?",
+            "Let's talk about films. What kind of movies do you enjoy watching?",
+        )
+
+        private val part1FollowUps = listOf(
+            "That's interesting. Can you tell me more about that?",
+            "I see. Why do you think that is?",
+            "Has that always been the case, or has it changed over time?",
+            "What do your friends or family think about that?",
+            "Do you think that's common for people your age?",
+            "If you could change one thing about that, what would it be?",
+            "That's a great point. Let me ask you something else — what are your plans for the near future?",
+            "Thank you for sharing. Let's move to a different topic. How important is technology in your daily life?",
+            "Interesting. Now let's talk about your hometown — what do you like most about it?",
+            "Thank you. That's the end of Part 1.",
+        )
+
         private val defaultPart3Questions = listOf(
             "What are the advantages and disadvantages of this?",
             "How has this changed in recent years?",

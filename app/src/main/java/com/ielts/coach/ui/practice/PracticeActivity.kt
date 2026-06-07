@@ -35,6 +35,7 @@ import com.ielts.coach.engine.scoring.BackendScoringProvider
 import com.ielts.coach.engine.scoring.LocalScoringProvider
 import com.ielts.coach.engine.scoring.ScoringResult
 import com.ielts.coach.engine.tts.AndroidTTSProvider
+import com.ielts.coach.engine.tts.ServerTTSProvider
 import com.ielts.coach.engine.tts.TTSProvider
 import com.ielts.coach.ui.common.BaseActivity
 import com.ielts.coach.ui.report.ReportActivity
@@ -74,9 +75,7 @@ class PracticeActivity : BaseActivity() {
         ) {
             initEngines()
             setupUI()
-            if (voiceOnlyMode) {
-                connectAndStart()
-            }
+            connectAndStart()
         } else {
             ActivityCompat.requestPermissions(
                 this,
@@ -96,9 +95,7 @@ class PracticeActivity : BaseActivity() {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 initEngines()
                 setupUI()
-                if (voiceOnlyMode) {
-                    connectAndStart()
-                }
+                connectAndStart()
             } else {
                 Toast.makeText(this, "需要麦克风权限才能使用口语练习功能", Toast.LENGTH_LONG).show()
                 finish()
@@ -123,11 +120,13 @@ class PracticeActivity : BaseActivity() {
         }
     }
 
+    private var sessionStarted = false
+
     private fun initEngines() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         voiceOnlyMode = !prefs.getBoolean(KEY_MODEL_READY, false)
 
-        // Digital Human Manager
+        // Digital Human Manager (loads in background, doesn't block conversation start)
         val dh = DuixMobileManager(this)
         dhManager = dh
         if (!voiceOnlyMode) {
@@ -138,10 +137,6 @@ class PracticeActivity : BaseActivity() {
                     override fun onReady() {
                         Log.d(TAG, "Digital human ready")
                         dh.triggerRandomMotion()
-                        // Start conversation only after DH is ready
-                        if (conversationEngine != null) {
-                            connectAndStart()
-                        }
                     }
 
                     override fun onError(error: String) {
@@ -165,8 +160,12 @@ class PracticeActivity : BaseActivity() {
         val asr = CloudASRProvider(iflytekAppId, iflytekApiKey, iflytekApiSecret)
         asrProvider = asr
 
-        // TTS Provider — Android TTS
-        val tts = AndroidTTSProvider(this, playAudio = voiceOnlyMode)
+        // TTS Provider — Server TTS (backend mode) or Android TTS (local)
+        val mode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE) ?: MODE_TEMPLATE
+        Log.d(TAG, "Conversation mode: $mode")
+        val backendUrl = prefs.getString(KEY_BACKEND_URL, "http://8.136.188.53:8001") ?: "http://8.136.188.53:8001"
+        val accent = prefs.getString(KEY_ACCENT, "british") ?: "british"
+        val tts: TTSProvider = AndroidTTSProvider(this, playAudio = voiceOnlyMode)
         ttsProvider = tts
         tts.init(object : TTSProvider.TTSCallback {
             override fun onPCMData(pcmData: ByteArray) {
@@ -178,12 +177,14 @@ class PracticeActivity : BaseActivity() {
             }
 
             override fun onSpeakComplete() {
-                Log.e(TAG, "TTS complete — starting ASR")
+                Log.d(TAG, "TTS complete — waiting 500ms before ASR")
                 if (!voiceOnlyMode) {
                     dh.stopPush()
                     dh.triggerRandomMotion()
                 }
-                conversationEngine?.startAsrListening()
+                uiHandler.postDelayed({
+                    conversationEngine?.startAsrListening()
+                }, 500)
             }
 
             override fun onError(error: String) {
@@ -192,10 +193,9 @@ class PracticeActivity : BaseActivity() {
         })
 
         // Conversation Provider — Template, LLM, or Backend
-        val mode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE) ?: MODE_TEMPLATE
         val conversationProvider: ConversationProvider = when (mode) {
             MODE_BACKEND -> {
-                BackendApiClient.baseUrl = prefs.getString(KEY_BACKEND_URL, "http://8.136.188.53:8000") ?: "http://8.136.188.53:8000"
+                BackendApiClient.baseUrl = backendUrl
                 BackendConversationProvider()
             }
             MODE_LLM -> {
@@ -294,6 +294,8 @@ class PracticeActivity : BaseActivity() {
     }
 
     private fun connectAndStart() {
+        if (sessionStarted) return
+        sessionStarted = true
         val engine = conversationEngine ?: run {
             Log.e(TAG, "ENGINE IS NULL - cannot start")
             return
@@ -409,6 +411,8 @@ class PracticeActivity : BaseActivity() {
                             durationSeconds = report.durationSeconds,
                             strengths = report.strengths,
                             improvements = report.improvements,
+                            corrections = report.corrections,
+                            vocabularySuggestions = report.vocabularySuggestions,
                             overallFeedback = report.overallFeedback,
                             timestamp = report.timestamp,
                         )
@@ -448,6 +452,7 @@ class PracticeActivity : BaseActivity() {
         private const val KEY_LLM_ENDPOINT = "llm_endpoint"
         private const val KEY_LLM_API_KEY = "llm_api_key"
         private const val KEY_BACKEND_URL = "backend_url"
+        private const val KEY_ACCENT = "accent"
 
         private const val MODE_TEMPLATE = "template"
         private const val MODE_BACKEND = "backend"

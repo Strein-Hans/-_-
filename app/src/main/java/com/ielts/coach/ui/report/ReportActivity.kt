@@ -79,6 +79,22 @@ class ReportActivity : BaseActivity() {
             binding.cardImprovements.visibility = View.VISIBLE
             binding.tvImprovements.text = report.improvements.joinToString("\n") { "• $it" }
         }
+
+        // Corrections
+        if (report.corrections.isNotEmpty()) {
+            binding.cardCorrections.visibility = View.VISIBLE
+            binding.tvCorrections.text = report.corrections.joinToString("\n\n") { c ->
+                "✗ ${c.original}\n✓ ${c.corrected}\n  ${c.explanation}"
+            }
+        }
+
+        // Vocabulary suggestions
+        if (report.vocabularySuggestions.isNotEmpty()) {
+            binding.cardVocabulary.visibility = View.VISIBLE
+            binding.tvVocabulary.text = report.vocabularySuggestions.joinToString("\n\n") { v ->
+                "${v.original} → ${v.suggested}\n  e.g. ${v.example}"
+            }
+        }
     }
 
     private fun bindDimension(

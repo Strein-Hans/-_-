@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">雅思口语陪练</string>
+    <string name="app_name">Svatar</string>
     <string name="home_subtitle">与AI考官一起练习口语</string>
 
     <!-- Parts -->
@@ -31,9 +31,12 @@
     <!-- Conversation Mode -->
     <string name="conversation_mode">对话模式</string>
     <string name="mode_template">模板考官</string>
+    <string name="mode_template_desc">预设话术，无需联网</string>
     <string name="mode_llm">AI考官（大模型）</string>
+    <string name="mode_llm_desc">DeepSeek 驱动，智能对话</string>
     <string name="mode_backend">后端服务器</string>
-    <string name="backend_url_hint">后端地址（如 http://10.0.2.2:8000）</string>
+    <string name="mode_backend_desc">完整后端，含评分与跑题引导</string>
+    <string name="backend_url_hint">后端地址（如 http://10.0.2.2:8001）</string>
 
     <!-- ASR Config -->
     <string name="asr_config">语音识别（讯飞）</string>
@@ -67,9 +70,12 @@
     <string name="words_per_minute">语速(词/分)</string>
     <string name="practice_again">再练一次</string>
     <string name="exit">退出</string>
+    <string name="advanced_settings">高级设置</string>
     <string name="scoring_in_progress">AI评分中…</string>
     <string name="strengths">优势</string>
     <string name="improvements">改进建议</string>
+    <string name="corrections">语法纠正</string>
+    <string name="vocabulary_suggestions">词汇升级</string>
     <string name="overall_feedback">综合反馈</string>
     <string name="examiner_transcript">考官</string>
 </resources>

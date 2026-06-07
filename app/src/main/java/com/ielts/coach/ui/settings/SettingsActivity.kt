@@ -13,6 +13,7 @@ import android.widget.Toast
 class SettingsActivity : BaseActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
+    private var selectedMode = MODE_TEMPLATE
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,12 +44,8 @@ class SettingsActivity : BaseActivity() {
         }
 
         // Conversation mode
-        val mode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE)
-        when (mode) {
-            MODE_BACKEND -> binding.chipGroupMode.check(binding.chipBackend.id)
-            MODE_LLM -> binding.chipGroupMode.check(binding.chipLlm.id)
-            else -> binding.chipGroupMode.check(binding.chipTemplate.id)
-        }
+        selectedMode = prefs.getString(KEY_CONVERSATION_MODE, MODE_TEMPLATE) ?: MODE_TEMPLATE
+        updateModeCards()
 
         // ASR config
         binding.etIflytekAppId.setText(prefs.getString(KEY_IFLYTEK_APP_ID, "05dd72b7"))
@@ -63,16 +60,60 @@ class SettingsActivity : BaseActivity() {
 
         // Backend URL
         binding.etBackendUrl.setText(
-            prefs.getString(KEY_BACKEND_URL, "http://8.136.188.53:8000")
+            prefs.getString(KEY_BACKEND_URL, "http://8.136.188.53:8001")
         )
+    }
 
-        // Show/hide fields based on mode
-        updateModeVisibility()
+    private fun updateModeCards() {
+        val selectedStroke = resources.getColor(R.color.mode_selected_stroke, null)
+        val selectedBg = resources.getColor(R.color.mode_selected_bg, null)
+        val unselectedStroke = resources.getColor(R.color.mode_unselected_stroke, null)
+        val unselectedBg = resources.getColor(R.color.mode_unselected_bg, null)
+
+        val cards = listOf(binding.cardModeTemplate, binding.cardModeLlm, binding.cardModeBackend)
+        val checks = listOf(binding.ivCheckTemplate, binding.ivCheckLlm, binding.ivCheckBackend)
+        val modes = listOf(MODE_TEMPLATE, MODE_LLM, MODE_BACKEND)
+
+        for (i in modes.indices) {
+            val isSelected = modes[i] == selectedMode
+            cards[i].strokeColor = if (isSelected) selectedStroke else unselectedStroke
+            cards[i].setCardBackgroundColor(if (isSelected) selectedBg else unselectedBg)
+            checks[i].setImageResource(
+                if (isSelected) R.drawable.ic_radio_checked else R.drawable.ic_radio_unchecked
+            )
+        }
     }
 
     private fun setupListeners() {
-        binding.chipGroupMode.setOnCheckedChangeListener { _, _ ->
-            updateModeVisibility()
+        binding.cardModeTemplate.setOnClickListener {
+            selectedMode = MODE_TEMPLATE
+            updateModeCards()
+        }
+
+        binding.cardModeLlm.setOnClickListener {
+            selectedMode = MODE_LLM
+            updateModeCards()
+        }
+
+        binding.cardModeBackend.setOnClickListener {
+            selectedMode = MODE_BACKEND
+            updateModeCards()
+        }
+
+        // Advanced settings toggle
+        binding.tvAdvancedToggle.setOnClickListener {
+            val layout = binding.layoutAdvanced
+            if (layout.visibility == View.VISIBLE) {
+                layout.visibility = View.GONE
+                binding.tvAdvancedToggle.setCompoundDrawablesWithIntrinsicBounds(
+                    0, 0, R.drawable.ic_expand_more, 0
+                )
+            } else {
+                layout.visibility = View.VISIBLE
+                binding.tvAdvancedToggle.setCompoundDrawablesWithIntrinsicBounds(
+                    0, 0, R.drawable.ic_expand_less, 0
+                )
+            }
         }
 
         binding.btnSave.setOnClickListener {
@@ -87,12 +128,7 @@ class SettingsActivity : BaseActivity() {
             LocaleHelper.saveLanguage(this, lang)
 
             // Conversation mode
-            val mode = when {
-                binding.chipBackend.isChecked -> MODE_BACKEND
-                binding.chipLlm.isChecked -> MODE_LLM
-                else -> MODE_TEMPLATE
-            }
-            prefs.putString(KEY_CONVERSATION_MODE, mode)
+            prefs.putString(KEY_CONVERSATION_MODE, selectedMode)
 
             // ASR
             prefs.putString(KEY_IFLYTEK_APP_ID, binding.etIflytekAppId.text.toString())
@@ -114,17 +150,6 @@ class SettingsActivity : BaseActivity() {
                 recreate()
             }
         }
-    }
-
-    private fun updateModeVisibility() {
-        val isLlm = binding.chipLlm.isChecked
-        val isBackend = binding.chipBackend.isChecked
-
-        binding.tvLlmLabel.visibility = if (isLlm) View.VISIBLE else View.GONE
-        binding.tilLlmEndpoint.visibility = if (isLlm) View.VISIBLE else View.GONE
-        binding.tilLlmApiKey.visibility = if (isLlm) View.VISIBLE else View.GONE
-
-        binding.tilBackendUrl.visibility = if (isBackend) View.VISIBLE else View.GONE
     }
 
     companion object {

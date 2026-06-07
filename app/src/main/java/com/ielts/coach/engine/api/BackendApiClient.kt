@@ -24,7 +24,7 @@ object BackendApiClient {
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
-    var baseUrl: String = "http://8.136.188.53:8000"
+    var baseUrl: String = "http://8.136.188.53:8001"
 
     fun post(path: String, body: JSONObject, callback: (Result<JSONObject>) -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
